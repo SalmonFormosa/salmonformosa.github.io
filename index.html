@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AR.js 範例</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/AR.js/2.1.8/aframe/build/aframe-ar.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <!-- 啟動 AR.js 的場景 -->
+    <a-scene embedded arjs>
+      
+      <!-- AR Marker (Hiro marker 預設) -->
+      <a-marker preset="hiro">
+        <!-- 在 marker 上放一個紅色立方體 -->
+        <a-box position="0 0.5 0" material="color: red;"></a-box>
+      </a-marker>
+
+      <!-- AR.js 需要的相機 -->
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
