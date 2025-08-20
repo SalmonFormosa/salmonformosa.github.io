@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>MindAR Debug Test</title>
+    <title>MindAR WebAR - 5 Drawings with GIFs</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/aframe/mindar-image-aframe.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/aframe/mindar-image-aframe.prod.js"></script>
     <style>
       body { margin: 0; overflow: hidden; }
     </style>
@@ -13,14 +13,64 @@
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind"
       embedded
+      color-space="sRGB"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
-      <a-camera position="0 0 0"></a-camera>
+      <a-assets>
+        <!-- 五個動畫 GIF -->
+        <img id="anim1" src="./anim1.gif">
+        <img id="anim2" src="./anim2.gif">
+        <img id="anim3" src="./anim3.gif">
+        <img id="anim4" src="./anim4.gif">
+        <img id="anim5" src="./anim5.gif">
+      </a-assets>
 
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <!-- drawing1.png -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-box color="red" depth="0.1" height="1" width="1"></a-box>
+        <a-plane id="plane1" src="#anim1" position="0 0 0"></a-plane>
+      </a-entity>
+
+      <!-- drawing2.png -->
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-plane id="plane2" src="#anim2" position="0 0 0"></a-plane>
+      </a-entity>
+
+      <!-- drawing3.png -->
+      <a-entity mindar-image-target="targetIndex: 2">
+        <a-plane id="plane3" src="#anim3" position="0 0 0"></a-plane>
+      </a-entity>
+
+      <!-- drawing4.png -->
+      <a-entity mindar-image-target="targetIndex: 3">
+        <a-plane id="plane4" src="#anim4" position="0 0 0"></a-plane>
+      </a-entity>
+
+      <!-- drawing5.png -->
+      <a-entity mindar-image-target="targetIndex: 4">
+        <a-plane id="plane5" src="#anim5" position="0 0 0"></a-plane>
       </a-entity>
     </a-scene>
+
+    <script>
+      // 自動依據圖片比例調整 GIF 顯示大小
+      function fitPlaneToImage(planeId, imgId, baseHeight = 1) {
+        const img = document.querySelector(imgId);
+        img.onload = () => {
+          const aspect = img.naturalWidth / img.naturalHeight;
+          const plane = document.querySelector(planeId);
+          plane.setAttribute("height", baseHeight);
+          plane.setAttribute("width", baseHeight * aspect);
+        };
+      }
+
+      fitPlaneToImage("#plane1", "#anim1");
+      fitPlaneToImage("#plane2", "#anim2");
+      fitPlaneToImage("#plane3", "#anim3");
+      fitPlaneToImage("#plane4", "#anim4");
+      fitPlaneToImage("#plane5", "#anim5");
+    </script>
   </body>
 </html>
