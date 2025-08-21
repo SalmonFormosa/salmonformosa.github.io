@@ -2,45 +2,45 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>MindAR WebAR 測試</title>
+    <title>MindAR WebAR - 新版整合</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <style>
       body { margin: 0; overflow: hidden; }
       #loadingScreen {
-        position: fixed; top:0; left:0; width:100%; height:100%;
-        background:black; color:white; font-size:20px;
-        display:flex; flex-direction:column; justify-content:center; align-items:center;
-        z-index:9999; text-align:center;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: black; color: white; font-size: 20px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 9999;
       }
-      #statusText { font-size:16px; color:#aaa; margin-top:10px; }
+      #statusText { margin-top: 20px; font-size: 16px; color: #aaa; }
       #startBtn, #retryBtn {
-        margin-top:20px; padding:10px 20px; font-size:16px; border:none; border-radius:6px;
-        cursor:pointer;
+        margin-top: 20px; padding: 10px 20px; border: none; border-radius: 6px;
+        font-size: 16px; cursor: pointer;
       }
       #startBtn { background: #28a745; color: white; display: none; }
       #retryBtn { background: #dc3545; color: white; display: none; }
     </style>
   </head>
   <body>
-    <!-- Loading 狀態顯示 -->
     <div id="loadingScreen">
       <div id="mainMessage">📂 載入中...</div>
-      <div id="statusText">初始化 AR 引擎</div>
+      <div id="statusText">正在初始化</div>
       <button id="startBtn">開始體驗</button>
-      <button id="retryBtn">重新嘗試</button>
+      <button id="retryBtn">重試</button>
     </div>
 
-    <!-- A-Frame + MindAR -->
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
       embedded
       color-space="sRGB"
       vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: true">
+      device-orientation-permission-ui="enabled: true"
+    >
       <a-assets>
         <img id="anim1" src="./anim1.gif">
       </a-assets>
+
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0">
@@ -60,61 +60,43 @@
         statusText.innerText = sub;
       }
 
-      // 先檢查 targets.mind
+      // 確認 targets.mind 是否存在
       fetch("./targets.mind").then(res => {
         if (res.ok) {
-          updateStatus("✅ 已載入目標檔案", "等待 AR 初始化...");
+          updateStatus("✅ 已載入目標檔案", "請按「開始體驗」");
+          startBtn.style.display = "inline-block";
         } else {
-          updateStatus("⚠️ 無法載入 targets.mind", "請確認檔案存在");
+          updateStatus("⚠️ 無法載入 targets.mind", "請確認檔案是否存在");
           retryBtn.style.display = "inline-block";
         }
-      }).catch(() => {
-        updateStatus("❌ 載入 targets.mind 失敗", "請確認路徑正確");
+      }).catch(err => {
+        console.error("❌ 載入 targets.mind 失敗:", err);
+        updateStatus("❌ 載入 targets.mind 失敗", "請檢查路徑或伺服器");
         retryBtn.style.display = "inline-block";
       });
 
-      // A-Frame scene 載入完成後檢查 MindAR
-      sceneEl.addEventListener("loaded", () => {
-        console.log("A-Frame scene loaded");
-        console.log("Available components:", Object.keys(sceneEl.components));
-
+      // A-Frame 與 MindAR 事件
+      sceneEl.addEventListener("arReady", () => {
+        console.log("✅ AR 準備完成");
+        updateStatus("🎉 AR 已準備完成", "相機初始化完成");
         setTimeout(() => {
-          const comp = sceneEl.components["mindar-image"];
-          if (!comp) {
-            console.error("mindar-image component not ready");
-            updateStatus("⚠️ 元件未初始化", "請檢查 MindAR 腳本");
-            retryBtn.style.display = "inline-block";
-          } else {
-            console.log("mindar-image component ready");
-            updateStatus("✅ 系統初始化完成", "請點選『開始體驗』");
-            startBtn.style.display = "inline-block";
-          }
-        }, 1000); // 延遲 1 秒以確保組件初始化
+          document.getElementById("loadingScreen").style.display = "none";
+        }, 800);
       });
 
-      // 啟動按鈕
-      startBtn.addEventListener("click", async () => {
-        updateStatus("🚀 啟動中...", "請允許相機權限");
-        const comp = sceneEl.components["mindar-image"];
-        if (!comp) {
-          updateStatus("⚠️ 無法啟動", "mindar-image 未就緒");
-          retryBtn.style.display = "inline-block";
-          return;
-        }
-        try {
-          await comp.start();
-          updateStatus("🎉 AR 已啟動", "正在打開相機...");
-          setTimeout(() => {
-            document.getElementById("loadingScreen").style.display = "none";
-          }, 1000);
-        } catch (err) {
-          console.error("MindAR start failed:", err);
-          updateStatus("❌ 啟動失敗", err.message || err);
-          retryBtn.style.display = "inline-block";
-        }
+      sceneEl.addEventListener("arError", (err) => {
+        console.error("❌ AR 錯誤：", err);
+        updateStatus("⚠️ AR 初始化失敗", "請確認相機權限或瀏覽器支援");
+        retryBtn.style.display = "inline-block";
       });
 
-      // 重新嘗試按鈕
+      // 點擊開始 -> 啟動 AR
+      startBtn.addEventListener("click", () => {
+        updateStatus("🚀 啟動中...", "請允許相機");
+        // 在 v1.2.x 不需要 comp.start()，只要設定 autoStart=false 然後觸發 start AR
+        sceneEl.systems["mindar-image-system"].start(); 
+      });
+
       retryBtn.addEventListener("click", () => {
         location.reload();
       });
