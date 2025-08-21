@@ -1,21 +1,123 @@
+<!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <meta charset="utf-8">
+    <title>MindAR WebAR 測試</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #loadingScreen {
+        position: fixed; top:0; left:0; width:100%; height:100%;
+        background:black; color:white; font-size:20px;
+        display:flex; flex-direction:column; justify-content:center; align-items:center;
+        z-index:9999; text-align:center;
+      }
+      #statusText { font-size:16px; color:#aaa; margin-top:10px; }
+      #startBtn, #retryBtn {
+        margin-top:20px; padding:10px 20px; font-size:16px; border:none; border-radius:6px;
+        cursor:pointer;
+      }
+      #startBtn { background: #28a745; color: white; display: none; }
+      #retryBtn { background: #dc3545; color: white; display: none; }
+    </style>
   </head>
   <body>
-    <a-scene mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-      <a-assets>
-        <img id="card" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png" />
-        <a-asset-item id="avatarModel" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/softmind/scene.gltf"></a-asset-item>
-      </a-assets>
+    <!-- Loading 狀態顯示 -->
+    <div id="loadingScreen">
+      <div id="mainMessage">📂 載入中...</div>
+      <div id="statusText">初始化 AR 引擎</div>
+      <button id="startBtn">開始體驗</button>
+      <button id="retryBtn">重新嘗試</button>
+    </div>
 
+    <!-- A-Frame + MindAR -->
+    <a-scene
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
+      embedded
+      color-space="sRGB"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: true">
+      <a-assets>
+        <img id="anim1" src="./anim1.gif">
+      </a-assets>
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane src="#card" position="0 0 0" height="0.552" width="1" rotation="0 0 0"></a-plane>
-        <a-gltf-model rotation="0 0 0 " position="0 0 0.1" scale="0.005 0.005 0.005" src="#avatarModel" animation="property: position; to: 0 0.1 0.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate">
+        <a-plane id="plane1" src="#anim1" position="0 0 0"></a-plane>
       </a-entity>
     </a-scene>
+
+    <script>
+      const mainMessage = document.getElementById("mainMessage");
+      const statusText = document.getElementById("statusText");
+      const startBtn = document.getElementById("startBtn");
+      const retryBtn = document.getElementById("retryBtn");
+      const sceneEl = document.querySelector("a-scene");
+
+      function updateStatus(msg, sub="") {
+        mainMessage.innerText = msg;
+        statusText.innerText = sub;
+      }
+
+      // 先檢查 targets.mind
+      fetch("./targets.mind").then(res => {
+        if (res.ok) {
+          updateStatus("✅ 已載入目標檔案", "等待 AR 初始化...");
+        } else {
+          updateStatus("⚠️ 無法載入 targets.mind", "請確認檔案存在");
+          retryBtn.style.display = "inline-block";
+        }
+      }).catch(() => {
+        updateStatus("❌ 載入 targets.mind 失敗", "請確認路徑正確");
+        retryBtn.style.display = "inline-block";
+      });
+
+      // A-Frame scene 載入完成後檢查 MindAR
+      sceneEl.addEventListener("loaded", () => {
+        console.log("A-Frame scene loaded");
+        console.log("Available components:", Object.keys(sceneEl.components));
+
+        setTimeout(() => {
+          const comp = sceneEl.components["mindar-image"];
+          if (!comp) {
+            console.error("mindar-image component not ready");
+            updateStatus("⚠️ 元件未初始化", "請檢查 MindAR 腳本");
+            retryBtn.style.display = "inline-block";
+          } else {
+            console.log("mindar-image component ready");
+            updateStatus("✅ 系統初始化完成", "請點選『開始體驗』");
+            startBtn.style.display = "inline-block";
+          }
+        }, 1000); // 延遲 1 秒以確保組件初始化
+      });
+
+      // 啟動按鈕
+      startBtn.addEventListener("click", async () => {
+        updateStatus("🚀 啟動中...", "請允許相機權限");
+        const comp = sceneEl.components["mindar-image"];
+        if (!comp) {
+          updateStatus("⚠️ 無法啟動", "mindar-image 未就緒");
+          retryBtn.style.display = "inline-block";
+          return;
+        }
+        try {
+          await comp.start();
+          updateStatus("🎉 AR 已啟動", "正在打開相機...");
+          setTimeout(() => {
+            document.getElementById("loadingScreen").style.display = "none";
+          }, 1000);
+        } catch (err) {
+          console.error("MindAR start failed:", err);
+          updateStatus("❌ 啟動失敗", err.message || err);
+          retryBtn.style.display = "inline-block";
+        }
+      });
+
+      // 重新嘗試按鈕
+      retryBtn.addEventListener("click", () => {
+        location.reload();
+      });
+    </script>
   </body>
 </html>
