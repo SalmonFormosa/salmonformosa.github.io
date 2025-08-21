@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <title>WebAR 全螢幕相機 + GIF（anim1~anim5）</title>
+    <title>WebAR 全螢幕相機 + GIF（自動偵測路徑版）</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
     <!-- A-Frame / MindAR（1.2.5） -->
@@ -59,13 +59,13 @@
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: true"
     >
-      <!-- 注意：檔名已改為 anim1~anim5，放在 /assets/ -->
+      <!-- 先不直接給 src；改由 JS 自動偵測能載入的實際路徑 -->
       <a-assets timeout="30000" id="assets">
-        <img id="gif1" src="/assets/anim1.gif?v=1" crossorigin="anonymous">
-        <img id="gif2" src="/assets/anim2.gif?v=1" crossorigin="anonymous">
-        <img id="gif3" src="/assets/anim3.gif?v=1" crossorigin="anonymous">
-        <img id="gif4" src="/assets/anim4.gif?v=1" crossorigin="anonymous">
-        <img id="gif5" src="/assets/anim5.gif?v=1" crossorigin="anonymous">
+        <img id="gif1" crossorigin="anonymous" data-basenames='["./assets/anim1.gif","/assets/anim1.gif","./anim1.gif"]'>
+        <img id="gif2" crossorigin="anonymous" data-basenames='["./assets/anim2.gif","/assets/anim2.gif","./anim2.gif"]'>
+        <img id="gif3" crossorigin="anonymous" data-basenames='["./assets/anim3.gif","/assets/anim3.gif","./anim3.gif"]'>
+        <img id="gif4" crossorigin="anonymous" data-basenames='["./assets/anim4.gif","/assets/anim4.gif","./anim4.gif"]'>
+        <img id="gif5" crossorigin="anonymous" data-basenames='["./assets/anim5.gif","/assets/anim5.gif","./anim5.gif"]'>
       </a-assets>
 
       <!-- 5 個目標：gif shader、透明、雙面、alphaTest 去邊緣鋸齒 -->
@@ -101,30 +101,52 @@
     <script>
       const $ = (q)=>document.querySelector(q);
       const statusEl = $('#status');
-      const overlay = $('#overlay');
+      const overlay  = $('#overlay');
       const startBtn = $('#startBtn');
       const retryBtn = $('#retryBtn');
-      const sceneEl = document.querySelector('a-scene');
+      const sceneEl  = document.querySelector('a-scene');
 
       const log = (m) => { console.log(m); statusEl.textContent += "\\n" + m; };
+
+      // 依序嘗試多個候選路徑，回傳第一個成功的 URL
+      function tryPaths(paths) {
+        return new Promise((resolve, reject) => {
+          let idx = 0;
+          const tryNext = () => {
+            if (idx >= paths.length) { reject(new Error('all paths failed')); return; }
+            const url = paths[idx++];
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload  = () => resolve(url);
+            img.onerror = () => { log(`❌ 圖片載入失敗：${url}`); tryNext(); };
+            img.src = url;
+          };
+          tryNext();
+        });
+      }
+
+      // 初始化資源路徑
+      async function initAssetPaths() {
+        const imgs = Array.from(document.querySelectorAll('#assets img'));
+        log(`等待圖片載入 0/${imgs.length}`);
+        let ok = 0;
+        for (const el of imgs) {
+          const candidates = JSON.parse(el.getAttribute('data-basenames'));
+          try {
+            const okUrl = await tryPaths(candidates);
+            el.setAttribute('src', okUrl); // 實際設定 src 給 a-assets
+            ok++;
+            log(`✅ 取得圖片路徑：${okUrl}（進度 ${ok}/${imgs.length}）`);
+          } catch {
+            log('⚠️ 這張圖所有候選路徑都失敗，請檢查檔名/大小寫/LFS：' + candidates.join(' , '));
+          }
+        }
+      }
 
       // 檢查 targets.mind
       fetch('./targets.mind')
         .then(r => r.ok ? log('📦 已載入 targets.mind') : log('⚠️ 無法載入 targets.mind（檔名/路徑）'))
         .catch(()=>log('❌ 讀取 targets.mind 失敗（請確認部署）'));
-
-      // 監聽圖片載入
-      const imgs = Array.from(document.querySelectorAll('#assets img'));
-      let loaded = imgs.filter(i=>i.complete).length;
-      log(`等待圖片載入 ${loaded}/${imgs.length}`);
-      imgs.forEach(img=>{
-        if (!img.complete) {
-          img.addEventListener('load', ()=>{ loaded++; log(`圖片載入：${loaded}/${imgs.length} ✅ ${img.getAttribute('src')}`); });
-          img.addEventListener('error', ()=>log(`❌ 圖片載入失敗：${img.getAttribute('src')}`));
-        } else {
-          log(`圖片已在快取：✅ ${img.getAttribute('src')}`);
-        }
-      });
 
       // A-Frame / MindAR 事件
       sceneEl.addEventListener('loaded', ()=>log('✅ A-Frame 已載入'));
@@ -133,7 +155,7 @@
       sceneEl.addEventListener('camera-init', ()=>log('📷 camera-init'));
       sceneEl.addEventListener('camera-error', (e)=>{ log('❌ camera-error：'+JSON.stringify(e.detail||e)); retryBtn.style.display='inline-block'; });
 
-      // 自動依 GIF 比例調整平面
+      // 自動依 GIF 比例調整平面尺寸
       function fitPlaneToImage(planeEl, imgEl, baseH=1){
         const setSize = ()=>{
           if (!imgEl.naturalWidth || !imgEl.naturalHeight) return;
@@ -185,6 +207,9 @@
         }
       });
       retryBtn.addEventListener('click', ()=>location.reload());
+
+      // ---- 啟動前先初始化圖片實際路徑 ----
+      initAssetPaths();
     </script>
   </body>
 </html>
