@@ -1,105 +1,79 @@
-<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
-    <title>MindAR WebAR - 新版整合</title>
+    <meta charset="utf-8" />
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <style>
-      body { margin: 0; overflow: hidden; }
-      #loadingScreen {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: black; color: white; font-size: 20px;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        z-index: 9999;
-      }
-      #statusText { margin-top: 20px; font-size: 16px; color: #aaa; }
-      #startBtn, #retryBtn {
-        margin-top: 20px; padding: 10px 20px; border: none; border-radius: 6px;
-        font-size: 16px; cursor: pointer;
-      }
-      #startBtn { background: #28a745; color: white; display: none; }
-      #retryBtn { background: #dc3545; color: white; display: none; }
-    </style>
+    <!-- 引入 GIF Shader -->
+    <script src="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
   </head>
   <body>
-    <div id="loadingScreen">
-      <div id="mainMessage">📂 載入中...</div>
-      <div id="statusText">正在初始化</div>
-      <button id="startBtn">開始體驗</button>
-      <button id="retryBtn">重試</button>
-    </div>
-
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;"
       embedded
       color-space="sRGB"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: true"
     >
       <a-assets>
-        <img id="anim1" src="./anim1.gif">
+        <!-- 五張 GIF -->
+        <img id="anim1" src="./drawing1.gif">
+        <img id="anim2" src="./drawing2.gif">
+        <img id="anim3" src="./drawing3.gif">
+        <img id="anim4" src="./drawing4.gif">
+        <img id="anim5" src="./drawing5.gif">
       </a-assets>
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
+      <!-- Target 1 -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane id="plane1" src="#anim1" position="0 0 0"></a-plane>
+        <a-plane
+          position="0 0 0"
+          height="1"
+          width="1"
+          material="shader: gif; src: #anim1; transparent: true;"
+        ></a-plane>
       </a-entity>
+
+      <!-- Target 2 -->
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-plane
+          position="0 0 0"
+          height="1"
+          width="1"
+          material="shader: gif; src: #anim2; transparent: true;"
+        ></a-plane>
+      </a-entity>
+
+      <!-- Target 3 -->
+      <a-entity mindar-image-target="targetIndex: 2">
+        <a-plane
+          position="0 0 0"
+          height="1"
+          width="1"
+          material="shader: gif; src: #anim3; transparent: true;"
+        ></a-plane>
+      </a-entity>
+
+      <!-- Target 4 -->
+      <a-entity mindar-image-target="targetIndex: 3">
+        <a-plane
+          position="0 0 0"
+          height="1"
+          width="1"
+          material="shader: gif; src: #anim4; transparent: true;"
+        ></a-plane>
+      </a-entity>
+
+      <!-- Target 5 -->
+      <a-entity mindar-image-target="targetIndex: 4">
+        <a-plane
+          position="0 0 0"
+          height="1"
+          width="1"
+          material="shader: gif; src: #anim5; transparent: true;"
+        ></a-plane>
+      </a-entity>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
     </a-scene>
-
-    <script>
-      const mainMessage = document.getElementById("mainMessage");
-      const statusText = document.getElementById("statusText");
-      const startBtn = document.getElementById("startBtn");
-      const retryBtn = document.getElementById("retryBtn");
-      const sceneEl = document.querySelector("a-scene");
-
-      function updateStatus(msg, sub="") {
-        mainMessage.innerText = msg;
-        statusText.innerText = sub;
-      }
-
-      // 確認 targets.mind 是否存在
-      fetch("./targets.mind").then(res => {
-        if (res.ok) {
-          updateStatus("✅ 已載入目標檔案", "請按「開始體驗」");
-          startBtn.style.display = "inline-block";
-        } else {
-          updateStatus("⚠️ 無法載入 targets.mind", "請確認檔案是否存在");
-          retryBtn.style.display = "inline-block";
-        }
-      }).catch(err => {
-        console.error("❌ 載入 targets.mind 失敗:", err);
-        updateStatus("❌ 載入 targets.mind 失敗", "請檢查路徑或伺服器");
-        retryBtn.style.display = "inline-block";
-      });
-
-      // A-Frame 與 MindAR 事件
-      sceneEl.addEventListener("arReady", () => {
-        console.log("✅ AR 準備完成");
-        updateStatus("🎉 AR 已準備完成", "相機初始化完成");
-        setTimeout(() => {
-          document.getElementById("loadingScreen").style.display = "none";
-        }, 800);
-      });
-
-      sceneEl.addEventListener("arError", (err) => {
-        console.error("❌ AR 錯誤：", err);
-        updateStatus("⚠️ AR 初始化失敗", "請確認相機權限或瀏覽器支援");
-        retryBtn.style.display = "inline-block";
-      });
-
-      // 點擊開始 -> 啟動 AR
-      startBtn.addEventListener("click", () => {
-        updateStatus("🚀 啟動中...", "請允許相機");
-        // 在 v1.2.x 不需要 comp.start()，只要設定 autoStart=false 然後觸發 start AR
-        sceneEl.systems["mindar-image-system"].start(); 
-      });
-
-      retryBtn.addEventListener("click", () => {
-        location.reload();
-      });
-    </script>
   </body>
 </html>
