@@ -1,194 +1,122 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html>
   <head>
-    <meta charset="utf-8" />
-    <title>MindAR WebAR - 啟動修正版</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta charset="utf-8">
+    <title>MindAR 相機測試</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/aframe/mindar-image-aframe.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/aframe/mindar-image-aframe.prod.js"></script>
     <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-      }
+      body { margin: 0; overflow: hidden; }
+
       #loadingScreen {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: black;
-        color: white;
-        font-size: 20px;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: black; color: white;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
         z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
       }
-      #statusText {
-        margin-top: 10px;
-        font-size: 14px;
-        color: #ccc;
-      }
-      #retryBtn, #startBtn {
+      #statusText { margin-top: 15px; font-size: 14px; color: #aaa; }
+      #startBtn, #retryBtn {
         margin-top: 20px;
         padding: 10px 20px;
-        background: #444;
-        border: none;
-        color: white;
         font-size: 16px;
-        border-radius: 5px;
         cursor: pointer;
-        display: none;
       }
+      #retryBtn { display: none; }
     </style>
   </head>
-
   <body>
-    <!-- 載入畫面 -->
+    <!-- Loading 畫面 -->
     <div id="loadingScreen">
       <div id="mainMessage">📂 載入中...</div>
-      <div id="statusText">初始化 AR 引擎</div>
-      <button id="startBtn">🚀 開始體驗</button>
-      <button id="retryBtn">🔄 重新嘗試</button>
+      <div id="statusText">正在載入 targets.mind</div>
+      <button id="startBtn">▶️ 開始體驗</button>
+      <button id="retryBtn">🔄 重試</button>
     </div>
 
-    <!-- A-Frame Scene -->
+    <!-- A-Frame 場景 -->
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
       embedded
       color-space="sRGB"
       vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: true"
+      device-orientation-permission-ui="enabled: false"
     >
-      <a-assets>
-        <img id="anim1" src="./anim1.gif" />
-        <img id="anim2" src="./anim2.gif" />
-        <img id="anim3" src="./anim3.gif" />
-        <img id="anim4" src="./anim4.gif" />
-        <img id="anim5" src="./anim5.gif" />
-      </a-assets>
-
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane id="plane1" src="#anim1" position="0 0 0"></a-plane>
-      </a-entity>
-      <a-entity mindar-image-target="targetIndex: 1">
-        <a-plane id="plane2" src="#anim2" position="0 0 0"></a-plane>
-      </a-entity>
-      <a-entity mindar-image-target="targetIndex: 2">
-        <a-plane id="plane3" src="#anim3" position="0 0 0"></a-plane>
-      </a-entity>
-      <a-entity mindar-image-target="targetIndex: 3">
-        <a-plane id="plane4" src="#anim4" position="0 0 0"></a-plane>
-      </a-entity>
-      <a-entity mindar-image-target="targetIndex: 4">
-        <a-plane id="plane5" src="#anim5" position="0 0 0"></a-plane>
+        <a-plane color="blue" height="1" width="1" position="0 0 0"></a-plane>
       </a-entity>
     </a-scene>
 
     <script>
       const mainMessage = document.getElementById("mainMessage");
       const statusText = document.getElementById("statusText");
-      const retryBtn = document.getElementById("retryBtn");
       const startBtn = document.getElementById("startBtn");
-
-      const updateStatus = (msg, sub = "") => {
-        console.log("📋", msg, sub);
-        mainMessage.innerText = msg;
-        statusText.innerText = sub;
-      };
-
-      // 載入 .mind 成功後才顯示按鈕
-      fetch("./targets.mind")
-        .then((res) => {
-          if (res.ok) {
-            updateStatus("✅ 已載入目標檔案", "請點擊下方按鈕開始");
-            startBtn.style.display = "inline-block";
-          } else {
-            updateStatus("⚠️ 找不到 targets.mind", "請確認檔案已上傳");
-          }
-        })
-        .catch(() => {
-          updateStatus("❌ 載入 targets.mind 失敗", "請確認網址與檔案");
-        });
-
-      // 自動調整 GIF 尺寸
-      function fitPlaneToImage(planeId, imgId, baseHeight = 1) {
-        const img = document.querySelector(imgId);
-        img.onload = () => {
-          const aspect = img.naturalWidth / img.naturalHeight;
-          const plane = document.querySelector(planeId);
-          plane.setAttribute("height", baseHeight);
-          plane.setAttribute("width", baseHeight * aspect);
-        };
-      }
-
-      window.addEventListener("load", () => {
-        fitPlaneToImage("#plane1", "#anim1");
-        fitPlaneToImage("#plane2", "#anim2");
-        fitPlaneToImage("#plane3", "#anim3");
-        fitPlaneToImage("#plane4", "#anim4");
-        fitPlaneToImage("#plane5", "#anim5");
-      });
-
+      const retryBtn = document.getElementById("retryBtn");
       const sceneEl = document.querySelector("a-scene");
 
+      function updateStatus(main, sub="") {
+        mainMessage.innerText = main;
+        statusText.innerText = sub;
+        console.log("📢 狀態更新:", main, sub);
+      }
+
+      // 確認 targets.mind 是否可載入
+      fetch("./targets.mind").then(res => {
+        if (res.ok) {
+          updateStatus("✅ 已載入目標檔案", "等待相機啟動");
+        } else {
+          updateStatus("⚠️ 無法載入 targets.mind", "請確認檔案是否存在");
+        }
+      }).catch(() => {
+        updateStatus("❌ 載入 targets.mind 失敗", "請確認路徑是否正確");
+      });
+
+      // 場景載入完成
       sceneEl.addEventListener("loaded", () => {
-        const camera = sceneEl.querySelector("a-camera");
-
-        camera.addEventListener("camera-init", () => {
-          updateStatus("📷 相機已啟動", "等待 AR 引擎準備");
-        });
-
-        camera.addEventListener("camera-error", (e) => {
-          console.error("❌ 相機錯誤", e);
-          updateStatus("❌ 無法啟動相機", "請檢查瀏覽器或權限");
-          retryBtn.style.display = "inline-block";
-        });
+        console.log("✅ A-Frame 場景已載入");
       });
 
+      // MindAR 準備完成
       sceneEl.addEventListener("arReady", () => {
-        updateStatus("🎉 AR 已準備完成", "請對準目標圖");
-        setTimeout(() => {
-          document.getElementById("loadingScreen").style.display = "none";
-        }, 1000);
+        console.log("🎉 AR 已準備完成");
+        updateStatus("🎉 AR 已準備完成", "相機初始化完成");
+        setTimeout(() => { document.getElementById("loadingScreen").style.display = "none"; }, 1000);
       });
 
+      // MindAR 錯誤
       sceneEl.addEventListener("arError", (err) => {
-        console.error("❌ AR 錯誤", err);
-        updateStatus("⚠️ AR 初始化失敗", "請確認相機權限與瀏覽器支援");
+        console.error("❌ AR 初始化失敗", err);
+        updateStatus("❌ AR 初始化失敗", JSON.stringify(err));
         retryBtn.style.display = "inline-block";
       });
 
-      // ✅ 修正後的啟動邏輯：等 mindar-image 準備好
-      startBtn.addEventListener("click", () => {
-        updateStatus("🚀 啟動中...", "請允許使用相機");
-
-        const tryStartMindAR = () => {
-          const mindarComponent = sceneEl.components["mindar-image"];
-          if (!mindarComponent) {
-            console.warn("⏳ mindar-image 尚未初始化，延後重試");
-            setTimeout(tryStartMindAR, 100);
-            return;
-          }
-
-          mindarComponent.start().then(() => {
-            console.log("✅ MindAR 啟動成功");
-          }).catch((err) => {
-            console.error("❌ MindAR 啟動失敗", err);
-            updateStatus("❌ 啟動失敗", "請確認瀏覽器支援與權限");
-            retryBtn.style.display = "inline-block";
-          });
-        };
-
-        tryStartMindAR();
+      // 相機錯誤偵測
+      const cameraEl = document.querySelector("a-camera");
+      cameraEl.addEventListener("camera-error", (e) => {
+        console.error("❌ 相機錯誤詳細資訊", e.detail);
+        updateStatus("❌ 無法啟動相機", "請檢查瀏覽器或權限");
+        retryBtn.style.display = "inline-block";
       });
 
-      retryBtn.addEventListener("click", () => location.reload());
+      // 開始按鈕
+      startBtn.addEventListener("click", async () => {
+        console.log("▶️ 開始體驗被點擊");
+        updateStatus("🚀 啟動中...", "請允許使用相機");
+        try {
+          const mindarEl = sceneEl.components["mindar-image"];
+          await mindarEl.start();
+          console.log("✅ MindAR 啟動成功");
+        } catch (err) {
+          console.error("❌ MindAR 啟動失敗", err);
+          updateStatus("❌ MindAR 啟動失敗", err.message || err);
+          retryBtn.style.display = "inline-block";
+        }
+      });
+
+      retryBtn.addEventListener("click", () => window.location.reload());
     </script>
   </body>
 </html>
