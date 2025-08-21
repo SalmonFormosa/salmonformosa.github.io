@@ -1,212 +1,117 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-  <head>
-    <meta charset="UTF-8" />
-    <title>WebAR 全螢幕相機 + GIF（穩定啟動版）</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const $ = (q)=>document.querySelector(q);
+    const statusEl = $('#status');
+    const overlay  = $('#overlay');
+    const startBtn = $('#startBtn');
+    const retryBtn = $('#retryBtn');
+    const sceneEl  = document.querySelector('a-scene');
 
-    <!-- A-Frame / MindAR -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <!-- GIF Shader -->
-    <script src="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-gif-shader@1.0.1/dist/aframe-gif-shader.min.js"></script>
+    const log = (m) => { console.log(m); statusEl.textContent += "\n" + m; };
 
-    <style>
-      html, body { height:100%; margin:0; background:#000; overflow:hidden; }
-      a-scene, canvas, .a-canvas {
-        position: fixed !important;
-        inset: 0 !important;
-        width: 100vw !important;
-        height: 100svh !important;
-        touch-action: none;
-      }
-      video, video[playsinline]{ object-fit: cover !important; }
-      body {
-        padding-top: env(safe-area-inset-top);
-        padding-bottom: env(safe-area-inset-bottom);
-        padding-left: env(safe-area-inset-left);
-        padding-right: env(safe-area-inset-right);
-      }
-      #overlay {
-        position: fixed; inset: 0; display:flex; flex-direction:column;
-        align-items:center; justify-content:center; background:rgba(0,0,0,.85);
-        color:#fff; z-index:9999; text-align:center; padding:24px;
-      }
-      #status { margin-top:12px; font:14px/1.6 monospace; color:#cfe9ff; white-space:pre-wrap; text-align:left; max-width:92vw; }
-      #startBtn, #retryBtn {
-        margin-top:16px; padding:12px 18px; font-size:16px; border:none; border-radius:10px; cursor:pointer;
-      }
-      #startBtn { background:#2e7d32; color:#fff; }
-      #retryBtn { background:#c62828; color:#fff; display:none; }
-    </style>
-  </head>
-  <body>
-    <div id="overlay">
-      <h2>📱 WebAR 載入中</h2>
-      <div>請點下方按鈕並允許相機權限</div>
-      <button id="startBtn">開始體驗</button>
-      <button id="retryBtn">重新整理</button>
-      <pre id="status">初始化…</pre>
-    </div>
+    // === 診斷事件 ===
+    sceneEl.addEventListener('loaded', ()=>log('✅ A-Frame 已載入'));
+    sceneEl.addEventListener('camera-init', ()=>log('📷 camera-init'));
+    sceneEl.addEventListener('camera-error', (e)=>{ log('❌ camera-error：'+JSON.stringify(e.detail||e)); retryBtn.style.display='inline-block'; });
+    sceneEl.addEventListener('arReady', ()=>{ log('🚀 MindAR 已啟動'); overlay.style.display='none'; });
+    sceneEl.addEventListener('arError',  (e)=>{ log('❌ AR 初始化失敗：'+JSON.stringify(e)); retryBtn.style.display='inline-block'; });
 
-    <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading:no; uiScanning:no; uiError:no"
-      embedded
-      renderer="alpha:true; antialias:true; colorManagement:true; physicallyCorrectLights:true; precision: mediump"
-      color-space="sRGB"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: true"
-    >
-      <a-assets timeout="30000" id="assets">
-        <img id="gif1" src="./assets/anim1.gif" crossorigin="anonymous">
-        <img id="gif2" src="./assets/anim2.gif" crossorigin="anonymous">
-        <img id="gif3" src="./assets/anim3.gif" crossorigin="anonymous">
-        <img id="gif4" src="./assets/anim4.gif" crossorigin="anonymous">
-        <img id="gif5" src="./assets/anim5.gif" crossorigin="anonymous">
-      </a-assets>
+    // GIF 比例
+    function fitPlaneToImage(planeEl, imgEl, baseH=1){
+      const setSize = ()=>{
+        if (!imgEl.naturalWidth || !imgEl.naturalHeight) return;
+        const aspect = imgEl.naturalWidth / imgEl.naturalHeight;
+        planeEl.setAttribute('height', baseH);
+        planeEl.setAttribute('width',  baseH*aspect);
+      };
+      if (imgEl.complete) setSize(); else imgEl.addEventListener('load', setSize, {once:true});
+    }
+    [['#p1','#gif1'],['#p2','#gif2'],['#p3','#gif3'],['#p4','#gif4'],['#p5','#gif5']]
+      .forEach(([p,i])=>fitPlaneToImage($(p), $(i)));
 
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane id="p1" position="0 0 0" width="1" height="1"
-          material="shader:gif; src:#gif1; transparent:true; side:double; alphaTest:0.001"
-          visible="false"></a-plane>
-      </a-entity>
-      <a-entity mindar-image-target="targetIndex: 1">
-        <a-plane id="p2" position="0 0 0" width="1" height="1"
-          material="shader:gif; src:#gif2; transparent:true; side:double; alphaTest:0.001"
-          visible="false"></a-plane>
-      </a-entity>
-      <a-entity mindar-image-target="targetIndex: 2">
-        <a-plane id="p3" position="0 0 0" width="1" height="1"
-          material="shader:gif; src:#gif3; transparent:true; side:double; alphaTest:0.001"
-          visible="false"></a-plane>
-      </a-entity>
-      <a-entity mindar-image-target="targetIndex: 3">
-        <a-plane id="p4" position="0 0 0" width="1" height="1"
-          material="shader:gif; src:#gif4; transparent:true; side:double; alphaTest:0.001"
-          visible="false"></a-plane>
-      </a-entity>
-      <a-entity mindar-image-target="targetIndex: 4">
-        <a-plane id="p5" position="0 0 0" width="1" height="1"
-          material="shader:gif; src:#gif5; transparent:true; side:double; alphaTest:0.001"
-          visible="false"></a-plane>
-      </a-entity>
+    // 目標顯示/隱藏
+    ;[0,1,2,3,4].forEach(idx=>{
+      const target = document.querySelector(`[mindar-image-target="targetIndex: ${idx}"]`);
+      const plane  = $('#p'+(idx+1));
+      const imgSel = '#gif'+(idx+1);
+      const restartGif = ()=>plane.setAttribute('material', `shader:gif; src:${imgSel}; transparent:true; side:double; alphaTest:0.001`);
+      target.addEventListener('targetFound', ()=>{ log(`🎯 偵測到目標 #${idx+1}`); restartGif(); plane.setAttribute('visible','true'); });
+      target.addEventListener('targetLost',  ()=>{ log(`👋 失去目標 #${idx+1}`); plane.setAttribute('visible','false'); });
+    });
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    </a-scene>
+    // 讀取 targets.mind（診斷）
+    fetch('./targets.mind')
+      .then(r => r.ok ? log('📦 已載入 targets.mind') : log('⚠️ 無法載入 targets.mind（檔名/路徑）'))
+      .catch(()=>log('❌ 讀取 targets.mind 失敗（請確認部署）'));
 
-    <script>
-      window.addEventListener('DOMContentLoaded', () => {
-        const $ = (q)=>document.querySelector(q);
-        const statusEl = $('#status');
-        const overlay  = $('#overlay');
-        const startBtn = $('#startBtn');
-        const retryBtn = $('#retryBtn');
+    // === 等待 renderer 就緒：多事件備援 + 超時保險 ===
+    function waitRendererReady(timeoutMs = 4000){
+      return new Promise((resolve)=>{
+        let resolved = false;
+        const done = (tag)=>{ if (!resolved){ resolved = true; log(`🟢 renderer ready via ${tag}`); resolve(); } };
+        const onRendererInit = ()=>done('rendererinitialized');
+        const onRenderStart  = ()=>done('renderstart');
+        const onLoaded       = ()=>done('loaded-fallback');
 
-        const log = (m) => { console.log(m); statusEl.textContent += "\\n" + m; };
+        sceneEl.addEventListener('rendererinitialized', onRendererInit, {once:true});
+        sceneEl.addEventListener('renderstart',        onRenderStart,  {once:true});
+        sceneEl.addEventListener('loaded',             onLoaded,       {once:true});
 
-        let sceneEl;
-        try {
-          sceneEl = document.querySelector('a-scene'); // 確保不是奇怪破折號
-          if (!sceneEl) throw new Error('找不到 <a-scene>');
-        } catch (e) {
-          log('❌ 初始化失敗：' + (e.message||e));
-          return;
-        }
+        // 若已經有 renderer 了，也視為就緒
+        if (sceneEl.renderer) done('renderer-exists');
 
-        // 事件監聽（若失敗，也不影響按鈕綁定）
-        try {
-          sceneEl.addEventListener('loaded', ()=>log('✅ A-Frame 已載入'));
-          sceneEl.addEventListener('camera-init', ()=>log('📷 camera-init'));
-          sceneEl.addEventListener('camera-error', (e)=>{ log('❌ camera-error：'+JSON.stringify(e.detail||e)); retryBtn.style.display='inline-block'; });
-          sceneEl.addEventListener('arReady', ()=>{ log('🚀 MindAR 已啟動'); overlay.style.display='none'; });
-          sceneEl.addEventListener('arError',  (e)=>{ log('❌ AR 初始化失敗：'+JSON.stringify(e)); retryBtn.style.display='inline-block'; });
-        } catch (e) {
-          log('⚠️ 綁定事件時出錯：' + (e.message||e));
-        }
-
-        // 圖片載入狀態（診斷用）
-        const imgs = Array.from(document.querySelectorAll('#assets img'));
-        let loaded = imgs.filter(i=>i.complete).length;
-        log(`等待圖片載入 ${loaded}/${imgs.length}`);
-        imgs.forEach(img=>{
-          if (!img.complete) {
-            img.addEventListener('load', ()=>{ loaded++; log(`圖片載入：${loaded}/${imgs.length} ✅ ${img.getAttribute('src')}`); });
-            img.addEventListener('error', ()=>log(`❌ 圖片載入失敗：${img.getAttribute('src')}`));
-          }
-        });
-
-        // targets.mind 診斷
-        fetch('./targets.mind')
-          .then(r => r.ok ? log('📦 已載入 targets.mind') : log('⚠️ 無法載入 targets.mind（檔名/路徑）'))
-          .catch(()=>log('❌ 讀取 targets.mind 失敗（請確認部署）'));
-
-        // 依 GIF 比例調整平面
-        function fitPlaneToImage(planeEl, imgEl, baseH=1){
-          const setSize = ()=>{
-            if (!imgEl.naturalWidth || !imgEl.naturalHeight) return;
-            const aspect = imgEl.naturalWidth / imgEl.naturalHeight;
-            planeEl.setAttribute('height', baseH);
-            planeEl.setAttribute('width',  baseH*aspect);
-          };
-          if (imgEl.complete) setSize(); else imgEl.addEventListener('load', setSize, {once:true});
-        }
-        [['#p1','#gif1'],['#p2','#gif2'],['#p3','#gif3'],['#p4','#gif4'],['#p5','#gif5']]
-          .forEach(([p,i])=>fitPlaneToImage($(p), $(i)));
-
-        // 目標顯示/隱藏
-        ;[0,1,2,3,4].forEach(idx=>{
-          const target = document.querySelector(`[mindar-image-target="targetIndex: ${idx}"]`);
-          const plane  = $('#p'+(idx+1));
-          const imgSel = '#gif'+(idx+1);
-          const restartGif = ()=>plane.setAttribute('material', `shader:gif; src:${imgSel}; transparent:true; side:double; alphaTest:0.001`);
-          target.addEventListener('targetFound', ()=>{ log(`🎯 偵測到目標 #${idx+1}`); restartGif(); plane.setAttribute('visible','true'); });
-          target.addEventListener('targetLost',  ()=>{ log(`👋 失去目標 #${idx+1}`); plane.setAttribute('visible','false'); });
-        });
-
-        // 手勢解鎖相機 → 再啟動 MindAR
-        async function unlockCameraOnce(){
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error('此瀏覽器不支援相機 API');
-          }
-          const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
-          stream.getTracks().forEach(t=>t.stop());
-        }
-        function waitSceneReady(){
-          return new Promise((res)=> {
-            const go = ()=>res();
-            if (sceneEl.renderer && sceneEl.hasLoaded) res();
-            else sceneEl.addEventListener('renderstart', go, {once:true});
-          });
-        }
-        async function safeStartMindAR(){
-          const sys = sceneEl.systems && sceneEl.systems['mindar-image-system'];
-          if (sys && typeof sys.start === 'function') {
-            sys.start();
-            log('✅ 呼叫 mindar-image-system.start() 完成，等待 arReady…');
-          } else {
-            // 退回自動啟動（避免 this.ui 尚未建立的錯誤）
-            log('⚠️ 無法取得 start()，切換 autoStart:true 後自動啟動');
-            const old = sceneEl.getAttribute('mindar-image') || '';
-            sceneEl.setAttribute('mindar-image', (old + '; autoStart: true;').replace(';;',';'));
-          }
-        }
-
-        // 按鈕：一定會先印出這行，若看不到表示按鈕沒被點到或 JS 提早中斷
-        startBtn.addEventListener('click', async ()=>{
-          try{
-            log('👉 「開始體驗」按鈕被點擊');
-            await unlockCameraOnce();
-            log('✅ 相機權限就緒，等待場景可啟動…');
-            await waitSceneReady();
-            await safeStartMindAR();
-          }catch(e){
-            log('❌ 啟動流程失敗：'+(e.message||e));
-            retryBtn.style.display='inline-block';
-          }
-        });
-
-        retryBtn.addEventListener('click', ()=>location.reload());
+        // 超時保險
+        setTimeout(()=>done('timeout'), timeoutMs);
       });
-    </script>
-  </body>
-</html>
+    }
+
+    // === 穩健啟動 MindAR：輪詢檢查 system 是否就緒 & 可呼叫 start ===
+    async function robustStartMindAR(maxTries = 30, intervalMs = 200){
+      for (let i=1; i<=maxTries; i++){
+        const sys = sceneEl.systems && sceneEl.systems['mindar-image-system'];
+        if (sys && typeof sys.start === 'function'){
+          try {
+            sys.start();
+            log(`✅ 已呼叫 mindar-image-system.start()（第 ${i} 次嘗試）`);
+            return;
+          } catch (e){
+            log(`⚠️ start() 仍失敗（第 ${i} 次）：${e.message||e}`);
+          }
+        } else {
+          log(`… 等待 mindar-image-system 就緒（第 ${i} 次）`);
+        }
+        await new Promise(r=>setTimeout(r, intervalMs));
+      }
+      // 最後備援：切 autoStart:true
+      log('⚠️ 長時間無法 start，切換 autoStart:true 嘗試自動啟動');
+      const old = sceneEl.getAttribute('mindar-image') || '';
+      sceneEl.setAttribute('mindar-image', (old + '; autoStart: true;').replace(';;',';'));
+    }
+
+    // 手勢先解鎖相機
+    async function unlockCameraOnce(){
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('此瀏覽器不支援相機 API');
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
+      stream.getTracks().forEach(t=>t.stop());
+    }
+
+    startBtn.addEventListener('click', async ()=>{
+      try{
+        log('👉 「開始體驗」按鈕被點擊');
+        await unlockCameraOnce();
+        log('✅ 相機權限就緒，等待 renderer…');
+        await waitRendererReady();         // 取代原本只等 renderstart 的作法
+        log('✅ renderer OK，啟動 MindAR 中…');
+        await robustStartMindAR();         // 逐步重試 start()
+        log('✅ start() 已呼叫，等待 arReady…');
+      }catch(e){
+        log('❌ 啟動流程失敗：'+(e.message||e));
+        retryBtn.style.display='inline-block';
+      }
+    });
+
+    retryBtn.addEventListener('click', ()=>location.reload());
+  });
+</script>
