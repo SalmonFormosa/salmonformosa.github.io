@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="utf-8" />
-    <title>MindAR WebAR 啟動按鈕版本</title>
+    <title>MindAR WebAR - 啟動修正版</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/aframe/mindar-image-aframe.prod.js"></script>
@@ -164,16 +164,28 @@
         retryBtn.style.display = "inline-block";
       });
 
-      startBtn.addEventListener("click", async () => {
-        const mindarEl = sceneEl.components["mindar-image"];
+      // ✅ 修正後的啟動邏輯：等 mindar-image 準備好
+      startBtn.addEventListener("click", () => {
         updateStatus("🚀 啟動中...", "請允許使用相機");
-        try {
-          await mindarEl.start(); // ✅ 手動啟動
-        } catch (err) {
-          updateStatus("❌ 啟動失敗", "請確認瀏覽器支援與權限");
-          console.error("MindAR 啟動失敗", err);
-          retryBtn.style.display = "inline-block";
-        }
+
+        const tryStartMindAR = () => {
+          const mindarComponent = sceneEl.components["mindar-image"];
+          if (!mindarComponent) {
+            console.warn("⏳ mindar-image 尚未初始化，延後重試");
+            setTimeout(tryStartMindAR, 100);
+            return;
+          }
+
+          mindarComponent.start().then(() => {
+            console.log("✅ MindAR 啟動成功");
+          }).catch((err) => {
+            console.error("❌ MindAR 啟動失敗", err);
+            updateStatus("❌ 啟動失敗", "請確認瀏覽器支援與權限");
+            retryBtn.style.display = "inline-block";
+          });
+        };
+
+        tryStartMindAR();
       });
 
       retryBtn.addEventListener("click", () => location.reload());
