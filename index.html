@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="utf-8" />
-    <title>MindAR WebAR - GIF Demo</title>
+    <title>MindAR WebAR 啟動按鈕版本</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/aframe/mindar-image-aframe.prod.js"></script>
@@ -32,7 +32,7 @@
         font-size: 14px;
         color: #ccc;
       }
-      #retryBtn {
+      #retryBtn, #startBtn {
         margin-top: 20px;
         padding: 10px 20px;
         background: #444;
@@ -40,8 +40,8 @@
         color: white;
         font-size: 16px;
         border-radius: 5px;
-        display: none;
         cursor: pointer;
+        display: none;
       }
     </style>
   </head>
@@ -51,12 +51,13 @@
     <div id="loadingScreen">
       <div id="mainMessage">📂 載入中...</div>
       <div id="statusText">初始化 AR 引擎</div>
+      <button id="startBtn">🚀 開始體驗</button>
       <button id="retryBtn">🔄 重新嘗試</button>
     </div>
 
-    <!-- A-Frame 主體 -->
+    <!-- A-Frame Scene -->
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;"
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
       embedded
       color-space="sRGB"
       vr-mode-ui="enabled: false"
@@ -93,6 +94,7 @@
       const mainMessage = document.getElementById("mainMessage");
       const statusText = document.getElementById("statusText");
       const retryBtn = document.getElementById("retryBtn");
+      const startBtn = document.getElementById("startBtn");
 
       const updateStatus = (msg, sub = "") => {
         console.log("📋", msg, sub);
@@ -100,11 +102,12 @@
         statusText.innerText = sub;
       };
 
-      // 載入目標檔
+      // 載入 .mind 成功後才顯示按鈕
       fetch("./targets.mind")
         .then((res) => {
           if (res.ok) {
-            updateStatus("✅ 已載入目標檔案", "等待相機啟動");
+            updateStatus("✅ 已載入目標檔案", "請點擊下方按鈕開始");
+            startBtn.style.display = "inline-block";
           } else {
             updateStatus("⚠️ 找不到 targets.mind", "請確認檔案已上傳");
           }
@@ -113,7 +116,7 @@
           updateStatus("❌ 載入 targets.mind 失敗", "請確認網址與檔案");
         });
 
-      // 自動調整 plane 大小
+      // 自動調整 GIF 尺寸
       function fitPlaneToImage(planeId, imgId, baseHeight = 1) {
         const img = document.querySelector(imgId);
         img.onload = () => {
@@ -144,7 +147,7 @@
         camera.addEventListener("camera-error", (e) => {
           console.error("❌ 相機錯誤", e);
           updateStatus("❌ 無法啟動相機", "請檢查瀏覽器或權限");
-          retryBtn.style.display = "block";
+          retryBtn.style.display = "inline-block";
         });
       });
 
@@ -158,7 +161,19 @@
       sceneEl.addEventListener("arError", (err) => {
         console.error("❌ AR 錯誤", err);
         updateStatus("⚠️ AR 初始化失敗", "請確認相機權限與瀏覽器支援");
-        retryBtn.style.display = "block";
+        retryBtn.style.display = "inline-block";
+      });
+
+      startBtn.addEventListener("click", async () => {
+        const mindarEl = sceneEl.components["mindar-image"];
+        updateStatus("🚀 啟動中...", "請允許使用相機");
+        try {
+          await mindarEl.start(); // ✅ 手動啟動
+        } catch (err) {
+          updateStatus("❌ 啟動失敗", "請確認瀏覽器支援與權限");
+          console.error("MindAR 啟動失敗", err);
+          retryBtn.style.display = "inline-block";
+        }
       });
 
       retryBtn.addEventListener("click", () => location.reload());
