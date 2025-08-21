@@ -1,79 +1,127 @@
-<html>
+<!DOCTYPE html>
+<html lang="zh-Hant">
   <head>
-    <meta charset="utf-8" />
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <meta charset="UTF-8">
+    <title>SalmonFormosa WebAR</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <!-- 引入 GIF Shader -->
-    <script src="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #debug {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.6);
+        color: #0f0;
+        padding: 8px 12px;
+        font-family: monospace;
+        font-size: 14px;
+        border-radius: 6px;
+        z-index: 9999;
+        max-width: 300px;
+      }
+    </style>
   </head>
   <body>
+    <div id="debug">⏳ 初始化中...</div>
+
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;"
       embedded
       color-space="sRGB"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: true"
+      renderer="colorManagement: true, physicallyCorrectLights"
     >
+      <!-- 資源區：影片優先，GIF 後備 -->
       <a-assets>
-        <!-- 五張 GIF -->
-        <img id="anim1" src="./drawing1.gif">
-        <img id="anim2" src="./drawing2.gif">
-        <img id="anim3" src="./drawing3.gif">
-        <img id="anim4" src="./drawing4.gif">
-        <img id="anim5" src="./drawing5.gif">
+        <video id="anim1" src="./drawing1.webm" autoplay loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
+        <img id="gif1" src="./drawing1.gif" crossorigin="anonymous">
+
+        <video id="anim2" src="./drawing2.webm" autoplay loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
+        <img id="gif2" src="./drawing2.gif" crossorigin="anonymous">
+
+        <video id="anim3" src="./drawing3.webm" autoplay loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
+        <img id="gif3" src="./drawing3.gif" crossorigin="anonymous">
+
+        <video id="anim4" src="./drawing4.webm" autoplay loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
+        <img id="gif4" src="./drawing4.gif" crossorigin="anonymous">
+
+        <video id="anim5" src="./drawing5.webm" autoplay loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
+        <img id="gif5" src="./drawing5.gif" crossorigin="anonymous">
       </a-assets>
 
-      <!-- Target 1 -->
+      <!-- 五個偵測目標：自動播放動畫 -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane
-          position="0 0 0"
-          height="1"
-          width="1"
-          material="shader: gif; src: #anim1; transparent: true;"
-        ></a-plane>
+        <a-video id="video1" src="#anim1" width="1" height="1" transparent="true"></a-video>
+        <a-plane id="gifplane1" src="#gif1" shader="gif" width="1" height="1" transparent="true" visible="false"></a-plane>
       </a-entity>
 
-      <!-- Target 2 -->
       <a-entity mindar-image-target="targetIndex: 1">
-        <a-plane
-          position="0 0 0"
-          height="1"
-          width="1"
-          material="shader: gif; src: #anim2; transparent: true;"
-        ></a-plane>
+        <a-video id="video2" src="#anim2" width="1" height="1" transparent="true"></a-video>
+        <a-plane id="gifplane2" src="#gif2" shader="gif" width="1" height="1" transparent="true" visible="false"></a-plane>
       </a-entity>
 
-      <!-- Target 3 -->
       <a-entity mindar-image-target="targetIndex: 2">
-        <a-plane
-          position="0 0 0"
-          height="1"
-          width="1"
-          material="shader: gif; src: #anim3; transparent: true;"
-        ></a-plane>
+        <a-video id="video3" src="#anim3" width="1" height="1" transparent="true"></a-video>
+        <a-plane id="gifplane3" src="#gif3" shader="gif" width="1" height="1" transparent="true" visible="false"></a-plane>
       </a-entity>
 
-      <!-- Target 4 -->
       <a-entity mindar-image-target="targetIndex: 3">
-        <a-plane
-          position="0 0 0"
-          height="1"
-          width="1"
-          material="shader: gif; src: #anim4; transparent: true;"
-        ></a-plane>
+        <a-video id="video4" src="#anim4" width="1" height="1" transparent="true"></a-video>
+        <a-plane id="gifplane4" src="#gif4" shader="gif" width="1" height="1" transparent="true" visible="false"></a-plane>
       </a-entity>
 
-      <!-- Target 5 -->
       <a-entity mindar-image-target="targetIndex: 4">
-        <a-plane
-          position="0 0 0"
-          height="1"
-          width="1"
-          material="shader: gif; src: #anim5; transparent: true;"
-        ></a-plane>
+        <a-video id="video5" src="#anim5" width="1" height="1" transparent="true"></a-video>
+        <a-plane id="gifplane5" src="#gif5" shader="gif" width="1" height="1" transparent="true" visible="false"></a-plane>
       </a-entity>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
     </a-scene>
+
+    <script>
+      const debugEl = document.getElementById("debug");
+      function log(msg) {
+        console.log(msg);
+        debugEl.innerHTML = msg;
+      }
+
+      const sceneEl = document.querySelector("a-scene");
+
+      sceneEl.addEventListener("loaded", () => {
+        log("✅ A-Frame scene 已載入，等待 MindAR...");
+      });
+
+      sceneEl.addEventListener("arReady", () => {
+        log("🚀 MindAR 已啟動，請將相機對準目標圖片");
+      });
+
+      sceneEl.addEventListener("arError", (err) => {
+        log("❌ MindAR 錯誤：" + JSON.stringify(err));
+      });
+
+      // 每個目標都監聽偵測狀態
+      for (let i = 1; i <= 5; i++) {
+        const target = sceneEl.querySelector(`[mindar-image-target="targetIndex: ${i-1}"]`);
+        const video = document.getElementById("video" + i);
+        const gifPlane = document.getElementById("gifplane" + i);
+
+        target.addEventListener("targetFound", () => {
+          log("🎯 偵測到目標 #" + i);
+          if (video && video.srcObject === null) {
+            // 若影片未成功載入，切換到 GIF
+            video.setAttribute("visible", "false");
+            gifPlane.setAttribute("visible", "true");
+            log("⚠️ 使用 GIF 後備 #" + i);
+          }
+        });
+
+        target.addEventListener("targetLost", () => {
+          log("👋 失去目標 #" + i);
+        });
+      }
+    </script>
   </body>
 </html>
