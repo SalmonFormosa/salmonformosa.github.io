@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>MindAR WebAR - 5 Drawings with GIFs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/aframe/mindar-image-aframe.prod.js"></script>
     <style>
-      body { margin: 0; overflow: hidden; }
-
-      /* loading / 狀態顯示畫面 */
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
       #loadingScreen {
         position: fixed;
         top: 0;
@@ -21,12 +23,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        text-align: center;
-        z-index: 9999;
         flex-direction: column;
+        z-index: 9999;
+        text-align: center;
       }
       #statusText {
-        margin-top: 20px;
+        margin-top: 10px;
         font-size: 16px;
         color: #aaa;
       }
@@ -44,7 +46,6 @@
     </style>
   </head>
   <body>
-    <!-- Loading 畫面 -->
     <div id="loadingScreen">
       <div id="mainMessage">📂 載入中...</div>
       <div id="statusText">初始化 AR 引擎</div>
@@ -52,18 +53,18 @@
     </div>
 
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind"
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true"
       embedded
       color-space="sRGB"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: true"
     >
       <a-assets>
-        <img id="anim1" src="./anim1.gif">
-        <img id="anim2" src="./anim2.gif">
-        <img id="anim3" src="./anim3.gif">
-        <img id="anim4" src="./anim4.gif">
-        <img id="anim5" src="./anim5.gif">
+        <img id="anim1" src="./anim1.gif" />
+        <img id="anim2" src="./anim2.gif" />
+        <img id="anim3" src="./anim3.gif" />
+        <img id="anim4" src="./anim4.gif" />
+        <img id="anim5" src="./anim5.gif" />
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -71,19 +72,15 @@
       <a-entity mindar-image-target="targetIndex: 0">
         <a-plane id="plane1" src="#anim1" position="0 0 0"></a-plane>
       </a-entity>
-
       <a-entity mindar-image-target="targetIndex: 1">
         <a-plane id="plane2" src="#anim2" position="0 0 0"></a-plane>
       </a-entity>
-
       <a-entity mindar-image-target="targetIndex: 2">
         <a-plane id="plane3" src="#anim3" position="0 0 0"></a-plane>
       </a-entity>
-
       <a-entity mindar-image-target="targetIndex: 3">
         <a-plane id="plane4" src="#anim4" position="0 0 0"></a-plane>
       </a-entity>
-
       <a-entity mindar-image-target="targetIndex: 4">
         <a-plane id="plane5" src="#anim5" position="0 0 0"></a-plane>
       </a-entity>
@@ -94,24 +91,26 @@
       const statusText = document.getElementById("statusText");
       const retryBtn = document.getElementById("retryBtn");
 
-      function updateStatus(message, subMessage="") {
-        console.log("📋 狀態更新:", message, subMessage);
-        mainMessage.innerText = message;
-        statusText.innerText = subMessage;
-      }
+      const updateStatus = (msg, sub = "") => {
+        console.log("📋", msg, sub);
+        mainMessage.innerText = msg;
+        statusText.innerText = sub;
+      };
 
-      // 檢查 targets.mind 是否能被讀取
-      fetch("./targets.mind").then(res => {
-        if (res.ok) {
-          updateStatus("✅ 已載入目標檔案", "等待相機啟動");
-        } else {
-          updateStatus("⚠️ 無法載入 targets.mind", "請確認檔案是否存在");
-        }
-      }).catch(() => {
-        updateStatus("❌ 載入 targets.mind 失敗", "請確認路徑是否正確");
-      });
+      // 檢查目標檔案
+      fetch("./targets.mind")
+        .then((res) => {
+          if (res.ok) {
+            updateStatus("✅ 已載入目標檔案", "等待相機啟動");
+          } else {
+            updateStatus("⚠️ 無法載入 targets.mind", "請確認檔案是否存在");
+          }
+        })
+        .catch(() => {
+          updateStatus("❌ 載入 targets.mind 失敗", "請確認路徑是否正確");
+        });
 
-      // 自動依據圖片比例調整 GIF 顯示大小
+      // 自動調整 GIF 大小
       function fitPlaneToImage(planeId, imgId, baseHeight = 1) {
         const img = document.querySelector(imgId);
         img.onload = () => {
@@ -122,23 +121,29 @@
         };
       }
 
-      fitPlaneToImage("#plane1", "#anim1");
-      fitPlaneToImage("#plane2", "#anim2");
-      fitPlaneToImage("#plane3", "#anim3");
-      fitPlaneToImage("#plane4", "#anim4");
-      fitPlaneToImage("#plane5", "#anim5");
-
-      // 監控 AR 狀態
-      const sceneEl = document.querySelector("a-scene");
-
-      sceneEl.addEventListener("camera-init", () => {
-        updateStatus("📷 相機已啟動", "等待 AR 引擎準備");
+      window.addEventListener("load", () => {
+        fitPlaneToImage("#plane1", "#anim1");
+        fitPlaneToImage("#plane2", "#anim2");
+        fitPlaneToImage("#plane3", "#anim3");
+        fitPlaneToImage("#plane4", "#anim4");
+        fitPlaneToImage("#plane5", "#anim5");
       });
 
-      sceneEl.addEventListener("camera-error", (err) => {
-        console.error("❌ 相機錯誤：", err);
-        updateStatus("❌ 無法啟動相機", "請檢查權限或瀏覽器設定");
-        retryBtn.style.display = "block";
+      const sceneEl = document.querySelector("a-scene");
+
+      sceneEl.addEventListener("loaded", () => {
+        console.log("✅ A-Frame scene loaded");
+
+        const camera = sceneEl.querySelector("a-camera");
+        camera.addEventListener("camera-init", () => {
+          updateStatus("📷 相機已啟動", "等待 AR 引擎準備");
+        });
+
+        camera.addEventListener("camera-error", (err) => {
+          console.error("❌ 相機錯誤", err);
+          updateStatus("❌ 無法啟動相機", "請確認瀏覽器權限");
+          retryBtn.style.display = "block";
+        });
       });
 
       sceneEl.addEventListener("arReady", () => {
@@ -149,14 +154,12 @@
       });
 
       sceneEl.addEventListener("arError", (err) => {
-        console.error("❌ AR 錯誤：", err);
-        updateStatus("⚠️ AR 初始化失敗", "請確認相機權限或瀏覽器支援");
+        console.error("❌ AR 錯誤", err);
+        updateStatus("⚠️ AR 初始化失敗", "請確認相機權限與瀏覽器支援");
         retryBtn.style.display = "block";
       });
 
-      retryBtn.addEventListener("click", () => {
-        location.reload();
-      });
+      retryBtn.addEventListener("click", () => location.reload());
     </script>
   </body>
 </html>
