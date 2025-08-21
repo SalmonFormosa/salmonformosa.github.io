@@ -30,6 +30,17 @@
         font-size: 16px;
         color: #aaa;
       }
+      #retryBtn {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+        background: #444;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -37,6 +48,7 @@
     <div id="loadingScreen">
       <div id="mainMessage">📷 載入中...</div>
       <div id="statusText">初始化 AR 引擎</div>
+      <button id="retryBtn">🔄 重新嘗試</button>
     </div>
 
     <a-scene
@@ -44,6 +56,7 @@
       embedded
       color-space="sRGB"
       vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: true"
     >
       <a-assets>
         <img id="anim1" src="./anim1.gif">
@@ -79,6 +92,7 @@
     <script>
       const mainMessage = document.getElementById("mainMessage");
       const statusText = document.getElementById("statusText");
+      const retryBtn = document.getElementById("retryBtn");
 
       function updateStatus(message, subMessage="") {
         mainMessage.innerText = message;
@@ -118,6 +132,12 @@
 
       // 監控 AR 狀態
       const sceneEl = document.querySelector("a-scene");
+
+      sceneEl.addEventListener("loaded", () => {
+        console.log("📦 A-Frame scene 已載入");
+        updateStatus("📦 A-Frame 已載入", "等待 MindAR 初始化");
+      });
+
       sceneEl.addEventListener("arReady", () => {
         console.log("✅ AR 準備完成");
         updateStatus("🎉 AR 已準備完成", "相機初始化完成");
@@ -129,6 +149,21 @@
       sceneEl.addEventListener("arError", (err) => {
         console.error("❌ AR 錯誤：", err);
         updateStatus("⚠️ AR 初始化失敗", "請確認相機權限或瀏覽器支援");
+        retryBtn.style.display = "block"; // 顯示重試按鈕
+      });
+
+      // 重試功能：重新啟動 scene
+      retryBtn.addEventListener("click", () => {
+        updateStatus("🔄 重新嘗試中...", "正在重新初始化 AR");
+        retryBtn.style.display = "none";
+
+        const oldScene = document.querySelector("a-scene");
+        oldScene.parentNode.removeChild(oldScene);
+
+        const newScene = oldScene.cloneNode(true);
+        document.body.appendChild(newScene);
+
+        console.log("♻️ 重新載入 A-Frame scene");
       });
     </script>
   </body>
