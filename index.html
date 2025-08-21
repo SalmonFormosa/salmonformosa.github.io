@@ -8,7 +8,7 @@
     <style>
       body { margin: 0; overflow: hidden; }
 
-      /* loading 畫面 */
+      /* loading / 狀態顯示畫面 */
       #loadingScreen {
         position: fixed;
         top: 0;
@@ -17,29 +17,33 @@
         height: 100%;
         background: black;
         color: white;
-        font-size: 24px;
+        font-size: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
+        text-align: center;
         z-index: 9999;
+        flex-direction: column;
+      }
+      #statusText {
+        margin-top: 20px;
+        font-size: 16px;
+        color: #aaa;
       }
     </style>
   </head>
   <body>
     <!-- Loading 畫面 -->
-    <div id="loadingScreen">📷 載入中，請允許相機存取...</div>
+    <div id="loadingScreen">
+      <div id="mainMessage">📷 載入中...</div>
+      <div id="statusText">初始化 AR 引擎</div>
+    </div>
 
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind"
       embedded
       color-space="sRGB"
       vr-mode-ui="enabled: false"
-      <a-scene
-  mindar-image="imageTargetSrc: ./targets.mind"
-  embedded
-  color-space="sRGB"
-  vr-mode-ui="enabled: false"
->
     >
       <a-assets>
         <img id="anim1" src="./anim1.gif">
@@ -73,6 +77,28 @@
     </a-scene>
 
     <script>
+      const mainMessage = document.getElementById("mainMessage");
+      const statusText = document.getElementById("statusText");
+
+      function updateStatus(message, subMessage="") {
+        mainMessage.innerText = message;
+        statusText.innerText = subMessage;
+      }
+
+      // 先顯示正在載入
+      updateStatus("📂 載入中...", "正在載入 targets.mind");
+
+      // 檢查 targets.mind 是否能被讀取
+      fetch("./targets.mind").then(res => {
+        if (res.ok) {
+          updateStatus("✅ 已載入目標檔案", "等待相機啟動");
+        } else {
+          updateStatus("⚠️ 無法載入 targets.mind", "請確認檔案是否存在");
+        }
+      }).catch(() => {
+        updateStatus("❌ 載入 targets.mind 失敗", "請確認路徑是否正確");
+      });
+
       // 自動依據圖片比例調整 GIF 顯示大小
       function fitPlaneToImage(planeId, imgId, baseHeight = 1) {
         const img = document.querySelector(imgId);
@@ -90,18 +116,20 @@
       fitPlaneToImage("#plane4", "#anim4");
       fitPlaneToImage("#plane5", "#anim5");
 
-      // Loading + Debug
+      // 監控 AR 狀態
       const sceneEl = document.querySelector("a-scene");
       sceneEl.addEventListener("arReady", () => {
         console.log("✅ AR 準備完成");
-        document.getElementById("loadingScreen").style.display = "none"; // 關閉 loading
+        updateStatus("🎉 AR 已準備完成", "相機初始化完成");
+        setTimeout(() => {
+          document.getElementById("loadingScreen").style.display = "none";
+        }, 1000);
       });
 
       sceneEl.addEventListener("arError", (err) => {
         console.error("❌ AR 錯誤：", err);
-        document.getElementById("loadingScreen").innerText = "⚠️ AR 初始化失敗，請確認相機權限";
+        updateStatus("⚠️ AR 初始化失敗", "請確認相機權限或瀏覽器支援");
       });
     </script>
   </body>
 </html>
-
