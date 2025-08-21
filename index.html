@@ -33,12 +33,12 @@
       #retryBtn {
         margin-top: 20px;
         padding: 10px 20px;
-        font-size: 16px;
         background: #444;
-        color: white;
         border: none;
-        border-radius: 6px;
+        color: white;
+        font-size: 16px;
         cursor: pointer;
+        border-radius: 5px;
         display: none;
       }
     </style>
@@ -46,7 +46,7 @@
   <body>
     <!-- Loading 畫面 -->
     <div id="loadingScreen">
-      <div id="mainMessage">📷 載入中...</div>
+      <div id="mainMessage">📂 載入中...</div>
       <div id="statusText">初始化 AR 引擎</div>
       <button id="retryBtn">🔄 重新嘗試</button>
     </div>
@@ -95,12 +95,10 @@
       const retryBtn = document.getElementById("retryBtn");
 
       function updateStatus(message, subMessage="") {
+        console.log("📋 狀態更新:", message, subMessage);
         mainMessage.innerText = message;
         statusText.innerText = subMessage;
       }
-
-      // 先顯示正在載入
-      updateStatus("📂 載入中...", "正在載入 targets.mind");
 
       // 檢查 targets.mind 是否能被讀取
       fetch("./targets.mind").then(res => {
@@ -133,13 +131,17 @@
       // 監控 AR 狀態
       const sceneEl = document.querySelector("a-scene");
 
-      sceneEl.addEventListener("loaded", () => {
-        console.log("📦 A-Frame scene 已載入");
-        updateStatus("📦 A-Frame 已載入", "等待 MindAR 初始化");
+      sceneEl.addEventListener("camera-init", () => {
+        updateStatus("📷 相機已啟動", "等待 AR 引擎準備");
+      });
+
+      sceneEl.addEventListener("camera-error", (err) => {
+        console.error("❌ 相機錯誤：", err);
+        updateStatus("❌ 無法啟動相機", "請檢查權限或瀏覽器設定");
+        retryBtn.style.display = "block";
       });
 
       sceneEl.addEventListener("arReady", () => {
-        console.log("✅ AR 準備完成");
         updateStatus("🎉 AR 已準備完成", "相機初始化完成");
         setTimeout(() => {
           document.getElementById("loadingScreen").style.display = "none";
@@ -149,21 +151,11 @@
       sceneEl.addEventListener("arError", (err) => {
         console.error("❌ AR 錯誤：", err);
         updateStatus("⚠️ AR 初始化失敗", "請確認相機權限或瀏覽器支援");
-        retryBtn.style.display = "block"; // 顯示重試按鈕
+        retryBtn.style.display = "block";
       });
 
-      // 重試功能：重新啟動 scene
       retryBtn.addEventListener("click", () => {
-        updateStatus("🔄 重新嘗試中...", "正在重新初始化 AR");
-        retryBtn.style.display = "none";
-
-        const oldScene = document.querySelector("a-scene");
-        oldScene.parentNode.removeChild(oldScene);
-
-        const newScene = oldScene.cloneNode(true);
-        document.body.appendChild(newScene);
-
-        console.log("♻️ 重新載入 A-Frame scene");
+        location.reload();
       });
     </script>
   </body>
