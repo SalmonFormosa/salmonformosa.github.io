@@ -7,17 +7,36 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/aframe/mindar-image-aframe.prod.js"></script>
     <style>
       body { margin: 0; overflow: hidden; }
+
+      /* loading 畫面 */
+      #loadingScreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: black;
+        color: white;
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
     </style>
   </head>
   <body>
+    <!-- Loading 畫面 -->
+    <div id="loadingScreen">📷 載入中，請允許相機存取...</div>
+
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind"
       embedded
       color-space="sRGB"
       vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
     >
       <a-assets>
-        <!-- 五個動畫 GIF -->
         <img id="anim1" src="./anim1.gif">
         <img id="anim2" src="./anim2.gif">
         <img id="anim3" src="./anim3.gif">
@@ -27,27 +46,22 @@
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- drawing1.png -->
       <a-entity mindar-image-target="targetIndex: 0">
         <a-plane id="plane1" src="#anim1" position="0 0 0"></a-plane>
       </a-entity>
 
-      <!-- drawing2.png -->
       <a-entity mindar-image-target="targetIndex: 1">
         <a-plane id="plane2" src="#anim2" position="0 0 0"></a-plane>
       </a-entity>
 
-      <!-- drawing3.png -->
       <a-entity mindar-image-target="targetIndex: 2">
         <a-plane id="plane3" src="#anim3" position="0 0 0"></a-plane>
       </a-entity>
 
-      <!-- drawing4.png -->
       <a-entity mindar-image-target="targetIndex: 3">
         <a-plane id="plane4" src="#anim4" position="0 0 0"></a-plane>
       </a-entity>
 
-      <!-- drawing5.png -->
       <a-entity mindar-image-target="targetIndex: 4">
         <a-plane id="plane5" src="#anim5" position="0 0 0"></a-plane>
       </a-entity>
@@ -70,6 +84,18 @@
       fitPlaneToImage("#plane3", "#anim3");
       fitPlaneToImage("#plane4", "#anim4");
       fitPlaneToImage("#plane5", "#anim5");
+
+      // Loading + Debug
+      const sceneEl = document.querySelector("a-scene");
+      sceneEl.addEventListener("arReady", () => {
+        console.log("✅ AR 準備完成");
+        document.getElementById("loadingScreen").style.display = "none"; // 關閉 loading
+      });
+
+      sceneEl.addEventListener("arError", (err) => {
+        console.error("❌ AR 錯誤：", err);
+        document.getElementById("loadingScreen").innerText = "⚠️ AR 初始化失敗，請確認相機權限";
+      });
     </script>
   </body>
 </html>
