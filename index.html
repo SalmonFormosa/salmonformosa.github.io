@@ -2,10 +2,10 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <title>WebAR 全螢幕相機 + GIF（autoStart 修正）</title>
+    <title>WebAR 全螢幕相機 + GIF（手動解鎖相機版）</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-    <!-- A-Frame / MindAR（1.2.5） -->
+    <!-- A-Frame / MindAR -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <!-- GIF Shader -->
@@ -13,7 +13,6 @@
 
     <style>
       html, body { height:100%; margin:0; background:#000; overflow:hidden; }
-      /* 全螢幕鋪滿，解掉底部白塊 */
       a-scene, canvas, .a-canvas {
         position: fixed !important;
         inset: 0 !important;
@@ -21,43 +20,43 @@
         height: 100svh !important;
         touch-action: none;
       }
-      video, video[playsinline] { object-fit: cover !important; }
+      video, video[playsinline]{ object-fit: cover !important; }
       body {
         padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
       }
-      /* 載入/診斷 UI（自製） */
       #overlay {
         position: fixed; inset: 0; display:flex; flex-direction:column;
         align-items:center; justify-content:center; background:rgba(0,0,0,.85);
         color:#fff; z-index:9999; text-align:center; padding:24px;
       }
       #status { margin-top:12px; font:14px/1.6 monospace; color:#cfe9ff; white-space:pre-wrap; text-align:left; max-width:92vw; }
-      #retryBtn {
+      #startBtn, #retryBtn {
         margin-top:16px; padding:12px 18px; font-size:16px; border:none; border-radius:10px; cursor:pointer;
-        background:#c62828; color:#fff; display:none;
       }
+      #startBtn { background:#2e7d32; color:#fff; }
+      #retryBtn { background:#c62828; color:#fff; display:none; }
     </style>
   </head>
   <body>
     <div id="overlay">
       <h2>📱 WebAR 載入中</h2>
-      <div>允許相機權限後，畫面會自動開始</div>
+      <div>請點下方按鈕並允許相機權限</div>
+      <button id="startBtn">開始體驗</button>
       <button id="retryBtn">重新整理</button>
       <pre id="status">初始化…</pre>
     </div>
 
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading:no; uiScanning:no; uiError:no"
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading:no; uiScanning:no; uiError:no"
       embedded
       renderer="alpha:true; antialias:true; colorManagement:true; physicallyCorrectLights:true; precision: mediump"
       color-space="sRGB"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: true"
     >
-      <!-- 直接使用你已驗證成功的路徑：./assets/anim1~5.gif -->
       <a-assets timeout="30000" id="assets">
         <img id="gif1" src="./assets/anim1.gif" crossorigin="anonymous">
         <img id="gif2" src="./assets/anim2.gif" crossorigin="anonymous">
@@ -66,7 +65,6 @@
         <img id="gif5" src="./assets/anim5.gif" crossorigin="anonymous">
       </a-assets>
 
-      <!-- 5 個目標：gif shader、透明、雙面、alphaTest 去邊緣鋸齒 -->
       <a-entity mindar-image-target="targetIndex: 0">
         <a-plane id="p1" position="0 0 0" width="1" height="1"
           material="shader:gif; src:#gif1; transparent:true; side:double; alphaTest:0.001"
@@ -100,41 +98,19 @@
       const $ = (q)=>document.querySelector(q);
       const statusEl = $('#status');
       const overlay  = $('#overlay');
+      const startBtn = $('#startBtn');
       const retryBtn = $('#retryBtn');
-      const sceneEl  = document.querySelector('a-scene');
-      const log = (m) => { console.log(m); statusEl.textContent += "\\n" + m; };
+      const sceneEl  = document.querySelector('a‑scene');
+      const log = (m)=>{ console.log(m); statusEl.textContent += "\\n" + m; };
 
-      // 檢查 targets.mind
-      fetch('./targets.mind')
-        .then(r => r.ok ? log('📦 已載入 targets.mind') : log('⚠️ 無法載入 targets.mind（檔名/路徑）'))
-        .catch(()=>log('❌ 讀取 targets.mind 失敗（請確認部署）'));
-
-      // 監聽圖片載入（純診斷）
-      const imgs = Array.from(document.querySelectorAll('#assets img'));
-      let loaded = imgs.filter(i=>i.complete).length;
-      log(`等待圖片載入 ${loaded}/${imgs.length}`);
-      imgs.forEach(img=>{
-        if (!img.complete) {
-          img.addEventListener('load', ()=>{ loaded++; log(`圖片載入：${loaded}/${imgs.length} ✅ ${img.getAttribute('src')}`); });
-          img.addEventListener('error', ()=>log(`❌ 圖片載入失敗：${img.getAttribute('src')}`));
-        }
-      });
-
-      // A-Frame / MindAR 事件（autoStart 會自動觸發）
-      sceneEl.addEventListener('loaded', ()=>log('✅ A-Frame 已載入'));
+      // 顯示核心事件
+      sceneEl.addEventListener('loaded', ()=>log('✅ A‑Frame 已載入'));
       sceneEl.addEventListener('camera-init', ()=>log('📷 camera-init'));
       sceneEl.addEventListener('camera-error', (e)=>{ log('❌ camera-error：'+JSON.stringify(e.detail||e)); retryBtn.style.display='inline-block'; });
+      sceneEl.addEventListener('arReady', ()=>{ log('🚀 MindAR 已啟動'); overlay.style.display='none'; });
+      sceneEl.addEventListener('arError',  (e)=>{ log('❌ AR 初始化失敗：'+JSON.stringify(e)); retryBtn.style.display='inline-block'; });
 
-      sceneEl.addEventListener('arReady', ()=>{
-        log('🚀 MindAR 已啟動');
-        overlay.style.display='none';     // 成功後隱藏自製 overlay
-      });
-      sceneEl.addEventListener('arError', (e)=>{
-        log('❌ AR 初始化失敗：'+JSON.stringify(e));
-        retryBtn.style.display='inline-block';
-      });
-
-      // 顯示/隱藏 GIF
+      // 依 GIF 比例調整
       function fitPlaneToImage(planeEl, imgEl, baseH=1){
         const setSize = ()=>{
           if (!imgEl.naturalWidth || !imgEl.naturalHeight) return;
@@ -144,39 +120,70 @@
         };
         if (imgEl.complete) setSize(); else imgEl.addEventListener('load', setSize, {once:true});
       }
+      [['#p1','#gif1'],['#p2','#gif2'],['#p3','#gif3'],['#p4','#gif4'],['#p5','#gif5']]
+        .forEach(([p,i])=>fitPlaneToImage($(p), $(i)));
 
-      const pairs = [
-        {idx:0, p:'#p1', i:'#gif1'},
-        {idx:1, p:'#p2', i:'#gif2'},
-        {idx:2, p:'#p3', i:'#gif3'},
-        {idx:3, p:'#p4', i:'#gif4'},
-        {idx:4, p:'#p5', i:'#gif5'},
-      ];
-
-      pairs.forEach(({idx,p,i})=>{
+      // 目標顯示/隱藏
+      ;[0,1,2,3,4].forEach(idx=>{
         const target = document.querySelector(`[mindar-image-target="targetIndex: ${idx}"]`);
-        const plane  = document.querySelector(p);
-        const img    = document.querySelector(i);
+        const plane  = $('#p'+(idx+1));
+        const imgSel = '#gif'+(idx+1);
+        const restartGif = ()=>plane.setAttribute('material', `shader:gif; src:${imgSel}; transparent:true; side:double; alphaTest:0.001`);
+        target.addEventListener('targetFound', ()=>{ log(`🎯 偵測到目標 #${idx+1}`); restartGif(); plane.setAttribute('visible','true'); });
+        target.addEventListener('targetLost',  ()=>{ log(`👋 失去目標 #${idx+1}`); plane.setAttribute('visible','false'); });
+      });
 
-        fitPlaneToImage(plane, img);
+      // 先以使用者手勢主動「解鎖相機」，再啟動 MindAR
+      async function unlockCameraOnce(){
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('此瀏覽器不支援相機 API');
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
+        // 立刻停止（只是為了解鎖權限/喚醒硬體）
+        stream.getTracks().forEach(t=>t.stop());
+      }
 
-        const restartGif = ()=>{
-          // 重新指定材質以「重播」
-          plane.setAttribute('material', `shader:gif; src:${i}; transparent:true; side:double; alphaTest:0.001`);
-        };
-
-        target.addEventListener('targetFound', ()=>{
-          log(`🎯 偵測到目標 #${idx+1}`);
-          restartGif();
-          plane.setAttribute('visible','true');
+      // 等待系統就緒後再 start（避免 this.ui 尚未建立）
+      function startMindARWhenReady(){
+        return new Promise((resolve, reject)=>{
+          const tryStart = ()=>{
+            try{
+              const sys = sceneEl.systems['mindar-image-system'];
+              if (!sys || !sys.start) { setTimeout(tryStart, 100); return; }
+              sys.start();
+              resolve();
+            }catch(e){
+              reject(e);
+            }
+          };
+          // renderstart 之後系統最穩
+          if (sceneEl.renderer && sceneEl.hasLoaded) {
+            tryStart();
+          } else {
+            sceneEl.addEventListener('renderstart', tryStart, {once:true});
+          }
         });
-        target.addEventListener('targetLost', ()=>{
-          log(`👋 失去目標 #${idx+1}`);
-          plane.setAttribute('visible','false');
-        });
+      }
+
+      startBtn.addEventListener('click', async ()=>{
+        try{
+          log('👉 申請/解鎖相機權限中...');
+          await unlockCameraOnce();
+          log('✅ 相機可用，啟動 AR 中...');
+          await startMindARWhenReady();
+          log('✅ 呼叫 start 完成，等待 arReady...');
+        }catch(e){
+          log('❌ 無法啟動：'+(e.message||e));
+          retryBtn.style.display='inline-block';
+        }
       });
 
       retryBtn.addEventListener('click', ()=>location.reload());
+
+      // 檢查 targets.mind（你之前 OK，保留診斷）
+      fetch('./targets.mind')
+        .then(r => r.ok ? log('📦 已載入 targets.mind') : log('⚠️ 無法載入 targets.mind（檔名/路徑）'))
+        .catch(()=>log('❌ 讀取 targets.mind 失敗（請確認部署）'));
     </script>
   </body>
 </html>
