@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <title>WebAR 全螢幕相機 + GIF（自動偵測路徑版）</title>
+    <title>WebAR 全螢幕相機 + GIF（autoStart 修正）</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
     <!-- A-Frame / MindAR（1.2.5） -->
@@ -13,7 +13,7 @@
 
     <style>
       html, body { height:100%; margin:0; background:#000; overflow:hidden; }
-      /* 全螢幕鋪滿，解決底部白塊 */
+      /* 全螢幕鋪滿，解掉底部白塊 */
       a-scene, canvas, .a-canvas {
         position: fixed !important;
         inset: 0 !important;
@@ -28,44 +28,42 @@
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
       }
-      /* 載入/診斷 UI */
+      /* 載入/診斷 UI（自製） */
       #overlay {
         position: fixed; inset: 0; display:flex; flex-direction:column;
         align-items:center; justify-content:center; background:rgba(0,0,0,.85);
         color:#fff; z-index:9999; text-align:center; padding:24px;
       }
       #status { margin-top:12px; font:14px/1.6 monospace; color:#cfe9ff; white-space:pre-wrap; text-align:left; max-width:92vw; }
-      #startBtn, #retryBtn {
+      #retryBtn {
         margin-top:16px; padding:12px 18px; font-size:16px; border:none; border-radius:10px; cursor:pointer;
+        background:#c62828; color:#fff; display:none;
       }
-      #startBtn { background:#2e7d32; color:#fff; }
-      #retryBtn { background:#c62828; color:#fff; display:none; }
     </style>
   </head>
   <body>
     <div id="overlay">
       <h2>📱 WebAR 載入中</h2>
-      <div>請確認相機權限，然後點「開始體驗」</div>
-      <button id="startBtn">開始體驗</button>
+      <div>允許相機權限後，畫面會自動開始</div>
       <button id="retryBtn">重新整理</button>
       <pre id="status">初始化…</pre>
     </div>
 
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading:no; uiScanning:no; uiError:no"
       embedded
       renderer="alpha:true; antialias:true; colorManagement:true; physicallyCorrectLights:true; precision: mediump"
       color-space="sRGB"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: true"
     >
-      <!-- 先不直接給 src；改由 JS 自動偵測能載入的實際路徑 -->
+      <!-- 直接使用你已驗證成功的路徑：./assets/anim1~5.gif -->
       <a-assets timeout="30000" id="assets">
-        <img id="gif1" crossorigin="anonymous" data-basenames='["./assets/anim1.gif","/assets/anim1.gif","./anim1.gif"]'>
-        <img id="gif2" crossorigin="anonymous" data-basenames='["./assets/anim2.gif","/assets/anim2.gif","./anim2.gif"]'>
-        <img id="gif3" crossorigin="anonymous" data-basenames='["./assets/anim3.gif","/assets/anim3.gif","./anim3.gif"]'>
-        <img id="gif4" crossorigin="anonymous" data-basenames='["./assets/anim4.gif","/assets/anim4.gif","./anim4.gif"]'>
-        <img id="gif5" crossorigin="anonymous" data-basenames='["./assets/anim5.gif","/assets/anim5.gif","./anim5.gif"]'>
+        <img id="gif1" src="./assets/anim1.gif" crossorigin="anonymous">
+        <img id="gif2" src="./assets/anim2.gif" crossorigin="anonymous">
+        <img id="gif3" src="./assets/anim3.gif" crossorigin="anonymous">
+        <img id="gif4" src="./assets/anim4.gif" crossorigin="anonymous">
+        <img id="gif5" src="./assets/anim5.gif" crossorigin="anonymous">
       </a-assets>
 
       <!-- 5 個目標：gif shader、透明、雙面、alphaTest 去邊緣鋸齒 -->
@@ -102,60 +100,41 @@
       const $ = (q)=>document.querySelector(q);
       const statusEl = $('#status');
       const overlay  = $('#overlay');
-      const startBtn = $('#startBtn');
       const retryBtn = $('#retryBtn');
       const sceneEl  = document.querySelector('a-scene');
-
       const log = (m) => { console.log(m); statusEl.textContent += "\\n" + m; };
-
-      // 依序嘗試多個候選路徑，回傳第一個成功的 URL
-      function tryPaths(paths) {
-        return new Promise((resolve, reject) => {
-          let idx = 0;
-          const tryNext = () => {
-            if (idx >= paths.length) { reject(new Error('all paths failed')); return; }
-            const url = paths[idx++];
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload  = () => resolve(url);
-            img.onerror = () => { log(`❌ 圖片載入失敗：${url}`); tryNext(); };
-            img.src = url;
-          };
-          tryNext();
-        });
-      }
-
-      // 初始化資源路徑
-      async function initAssetPaths() {
-        const imgs = Array.from(document.querySelectorAll('#assets img'));
-        log(`等待圖片載入 0/${imgs.length}`);
-        let ok = 0;
-        for (const el of imgs) {
-          const candidates = JSON.parse(el.getAttribute('data-basenames'));
-          try {
-            const okUrl = await tryPaths(candidates);
-            el.setAttribute('src', okUrl); // 實際設定 src 給 a-assets
-            ok++;
-            log(`✅ 取得圖片路徑：${okUrl}（進度 ${ok}/${imgs.length}）`);
-          } catch {
-            log('⚠️ 這張圖所有候選路徑都失敗，請檢查檔名/大小寫/LFS：' + candidates.join(' , '));
-          }
-        }
-      }
 
       // 檢查 targets.mind
       fetch('./targets.mind')
         .then(r => r.ok ? log('📦 已載入 targets.mind') : log('⚠️ 無法載入 targets.mind（檔名/路徑）'))
         .catch(()=>log('❌ 讀取 targets.mind 失敗（請確認部署）'));
 
-      // A-Frame / MindAR 事件
+      // 監聽圖片載入（純診斷）
+      const imgs = Array.from(document.querySelectorAll('#assets img'));
+      let loaded = imgs.filter(i=>i.complete).length;
+      log(`等待圖片載入 ${loaded}/${imgs.length}`);
+      imgs.forEach(img=>{
+        if (!img.complete) {
+          img.addEventListener('load', ()=>{ loaded++; log(`圖片載入：${loaded}/${imgs.length} ✅ ${img.getAttribute('src')}`); });
+          img.addEventListener('error', ()=>log(`❌ 圖片載入失敗：${img.getAttribute('src')}`));
+        }
+      });
+
+      // A-Frame / MindAR 事件（autoStart 會自動觸發）
       sceneEl.addEventListener('loaded', ()=>log('✅ A-Frame 已載入'));
-      sceneEl.addEventListener('arReady', ()=>{ log('🚀 MindAR 已啟動'); overlay.style.display='none'; });
-      sceneEl.addEventListener('arError', (e)=>{ log('❌ AR 初始化失敗：'+JSON.stringify(e)); retryBtn.style.display='inline-block'; });
       sceneEl.addEventListener('camera-init', ()=>log('📷 camera-init'));
       sceneEl.addEventListener('camera-error', (e)=>{ log('❌ camera-error：'+JSON.stringify(e.detail||e)); retryBtn.style.display='inline-block'; });
 
-      // 自動依 GIF 比例調整平面尺寸
+      sceneEl.addEventListener('arReady', ()=>{
+        log('🚀 MindAR 已啟動');
+        overlay.style.display='none';     // 成功後隱藏自製 overlay
+      });
+      sceneEl.addEventListener('arError', (e)=>{
+        log('❌ AR 初始化失敗：'+JSON.stringify(e));
+        retryBtn.style.display='inline-block';
+      });
+
+      // 顯示/隱藏 GIF
       function fitPlaneToImage(planeEl, imgEl, baseH=1){
         const setSize = ()=>{
           if (!imgEl.naturalWidth || !imgEl.naturalHeight) return;
@@ -182,6 +161,7 @@
         fitPlaneToImage(plane, img);
 
         const restartGif = ()=>{
+          // 重新指定材質以「重播」
           plane.setAttribute('material', `shader:gif; src:${i}; transparent:true; side:double; alphaTest:0.001`);
         };
 
@@ -196,20 +176,7 @@
         });
       });
 
-      // 手動啟動（新版 API）
-      startBtn.addEventListener('click', ()=>{
-        try{
-          log('👉 嘗試啟動 AR（mindar-image-system.start）');
-          sceneEl.systems['mindar-image-system'].start();
-        }catch(e){
-          log('❌ 啟動呼叫失敗：'+(e.message||e));
-          retryBtn.style.display='inline-block';
-        }
-      });
       retryBtn.addEventListener('click', ()=>location.reload());
-
-      // ---- 啟動前先初始化圖片實際路徑 ----
-      initAssetPaths();
     </script>
   </body>
 </html>
