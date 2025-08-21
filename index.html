@@ -2,42 +2,29 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <title>WebAR 全螢幕相機 + GIF</title>
-
-    <!-- 讓內容可延伸到瀏海區，避免底部留白 -->
+    <title>WebAR 全螢幕相機 + GIF（診斷版）</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-    <!-- A-Frame / MindAR（1.2.5 版）-->
+    <!-- A-Frame / MindAR（1.2.5） -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <!-- GIF Shader（讓 GIF 真的動 & 透明）-->
+    <!-- GIF Shader -->
     <script src="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-gif-shader@1.0.1/dist/aframe-gif-shader.min.js"></script>
 
     <style>
-      /* 重要：整頁鋪滿 & 背景黑，避免相機未就緒時閃白 */
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        background: #000;
-        overflow: hidden;
-      }
+      html, body { height:100%; margin:0; background:#000; overflow:hidden; }
 
-      /* 關鍵：把 AR 畫面固定鋪滿整個安全視窗 */
+      /* 全螢幕鋪滿，解決底部白塊 */
       a-scene, canvas, .a-canvas {
         position: fixed !important;
-        inset: 0 !important;            /* top:0; right:0; bottom:0; left:0 */
+        inset: 0 !important;
         width: 100vw !important;
-        height: 100svh !important;      /* 行動裝置正確高度（含瀏海/工具列變化） */
+        height: 100svh !important;
         touch-action: none;
       }
+      video, video[playsinline] { object-fit: cover !important; }
 
-      /* MindAR 內部的 <video> 若可見，確保鋪滿且不變形 */
-      video, video[playsinline] {
-        object-fit: cover !important;
-      }
-
-      /* 角位移安全區（iOS 瀏海區） */
+      /* 安全區 */
       body {
         padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
@@ -45,66 +32,76 @@
         padding-right: env(safe-area-inset-right);
       }
 
-      /* 簡易除錯訊息（可刪） */
-      #debug {
-        position: fixed;
-        top: 10px; left: 10px;
-        background: rgba(0,0,0,.55);
-        color: #0f0;
-        padding: 8px 12px;
-        font: 13px/1.4 monospace;
-        border-radius: 8px;
-        z-index: 9999;
-        max-width: 80vw;
-        pointer-events: none;
+      /* 載入/診斷 UI */
+      #overlay {
+        position: fixed; inset: 0; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; background:rgba(0,0,0,.85);
+        color:#fff; z-index:9999; text-align:center; padding:24px;
+      }
+      #status { margin-top:12px; font:14px/1.6 monospace; color:#cfe9ff; white-space:pre-wrap; text-align:left; max-width:92vw; }
+      #startBtn, #retryBtn {
+        margin-top:16px; padding:12px 18px; font-size:16px; border:none; border-radius:10px; cursor:pointer;
+      }
+      #startBtn { background:#2e7d32; color:#fff; }
+      #retryBtn { background:#c62828; color:#fff; display:none; }
+
+      /* 右上角即時小log（可保留） */
+      #miniLog {
+        position:fixed; top:10px; right:10px; z-index:9999;
+        background:rgba(0,0,0,.55); color:#0f0; padding:8px 10px;
+        font:12px/1.4 monospace; border-radius:8px; max-width:60vw; pointer-events:none;
       }
     </style>
   </head>
   <body>
-    <div id="debug">⏳ 初始化中...</div>
+    <!-- 載入/診斷層 -->
+    <div id="overlay">
+      <h2>📱 WebAR 載入中</h2>
+      <div>請確認相機權限，然後點「開始體驗」</div>
+      <button id="startBtn">開始體驗</button>
+      <button id="retryBtn">重新整理</button>
+      <pre id="status">初始化…</pre>
+    </div>
+    <div id="miniLog">init…</div>
 
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;"
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
       embedded
-      renderer="alpha: true; antialias: true; colorManagement: true; physicallyCorrectLights: true; precision: mediump"
+      renderer="alpha:true; antialias:true; colorManagement:true; physicallyCorrectLights:true; precision: mediump"
       color-space="sRGB"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: true"
     >
-      <!-- 你的 GIF（建議本身要是透明背景 GIF） -->
-      <a-assets timeout="30000">
-        <img id="gif1" src="./drawing1.gif" crossorigin="anonymous" />
-        <img id="gif2" src="./drawing2.gif" crossorigin="anonymous" />
-        <img id="gif3" src="./drawing3.gif" crossorigin="anonymous" />
-        <img id="gif4" src="./drawing4.gif" crossorigin="anonymous" />
-        <img id="gif5" src="./drawing5.gif" crossorigin="anonymous" />
+      <!-- 你的 5 張透明 GIF（若素材本身是白底，也會看到白） -->
+      <a-assets timeout="30000" id="assets">
+        <img id="gif1" src="./drawing1.gif" crossorigin="anonymous">
+        <img id="gif2" src="./drawing2.gif" crossorigin="anonymous">
+        <img id="gif3" src="./drawing3.gif" crossorigin="anonymous">
+        <img id="gif4" src="./drawing4.gif" crossorigin="anonymous">
+        <img id="gif5" src="./drawing5.gif" crossorigin="anonymous">
       </a-assets>
 
-      <!-- 五個目標：使用 gif shader；透明、雙面，alphaTest 去除邊緣殘影 -->
+      <!-- 5 個目標：gif shader、透明、雙面、alphaTest 去鋸齒邊 -->
       <a-entity mindar-image-target="targetIndex: 0">
         <a-plane id="p1" position="0 0 0" width="1" height="1"
           material="shader:gif; src:#gif1; transparent:true; side:double; alphaTest:0.001"
           visible="false"></a-plane>
       </a-entity>
-
       <a-entity mindar-image-target="targetIndex: 1">
         <a-plane id="p2" position="0 0 0" width="1" height="1"
           material="shader:gif; src:#gif2; transparent:true; side:double; alphaTest:0.001"
           visible="false"></a-plane>
       </a-entity>
-
       <a-entity mindar-image-target="targetIndex: 2">
         <a-plane id="p3" position="0 0 0" width="1" height="1"
           material="shader:gif; src:#gif3; transparent:true; side:double; alphaTest:0.001"
           visible="false"></a-plane>
       </a-entity>
-
       <a-entity mindar-image-target="targetIndex: 3">
         <a-plane id="p4" position="0 0 0" width="1" height="1"
           material="shader:gif; src:#gif4; transparent:true; side:double; alphaTest:0.001"
           visible="false"></a-plane>
       </a-entity>
-
       <a-entity mindar-image-target="targetIndex: 4">
         <a-plane id="p5" position="0 0 0" width="1" height="1"
           material="shader:gif; src:#gif5; transparent:true; side:double; alphaTest:0.001"
@@ -115,66 +112,100 @@
     </a-scene>
 
     <script>
-      const dbg = document.getElementById("debug");
-      const log = (m) => { console.log(m); dbg.textContent = m; };
+      const $ = (q)=>document.querySelector(q);
+      const statusEl = $('#status');
+      const miniLogEl = $('#miniLog');
+      const overlay = $('#overlay');
+      const startBtn = $('#startBtn');
+      const retryBtn = $('#retryBtn');
+      const sceneEl = document.querySelector('a-scene');
 
-      const sceneEl = document.querySelector("a-scene");
+      const log = (m) => { console.log(m); statusEl.textContent += "\\n" + m; miniLogEl.textContent = m; };
 
-      // 基本事件
-      sceneEl.addEventListener("loaded", () => log("✅ A-Frame 已載入，等待 MindAR..."));
-      sceneEl.addEventListener("arReady", () => log("🚀 MindAR 已啟動，請對準圖片"));
-      sceneEl.addEventListener("arError", (e) => log("❌ MindAR 初始化失敗：" + JSON.stringify(e)));
+      // 監聽資源載入進度（看是不是卡在 assets）
+      const assets = $('#assets');
+      let loaded = 0, total = 0;
+      assets.addEventListener('loadeddata',()=>log('assets loadeddata'));
+      assets.addEventListener('loaded',()=>log('assets loaded'));
 
-      // 目標偵測：找到就顯示 GIF，離開就隱藏
-      const pairs = [
-        {targetIndex:0, planeId:"p1", img:"#gif1"},
-        {targetIndex:1, planeId:"p2", img:"#gif2"},
-        {targetIndex:2, planeId:"p3", img:"#gif3"},
-        {targetIndex:3, planeId:"p4", img:"#gif4"},
-        {targetIndex:4, planeId:"p5", img:"#gif5"},
-      ];
+      // 粗略統計 img 數
+      const imgs = assets.querySelectorAll('img');
+      total = imgs.length;
+      imgs.forEach(img=>{
+        if (img.complete) { loaded++; }
+        else {
+          img.addEventListener('load', ()=>{ loaded++; log(`資源載入：${loaded}/${total}`); });
+          img.addEventListener('error', ()=>log(`❌ 圖片載入失敗：${img.getAttribute('src')}`));
+        }
+      });
+      log(`等待圖片載入 ${loaded}/${total}`);
 
-      // 讓平面尺寸自動依照 GIF 比例（避免被拉扁/拉長）
-      function fitPlaneToImage(planeEl, imgEl, baseHeight = 1) {
-        const setSize = () => {
+      // 檢查 targets.mind
+      fetch('./targets.mind')
+        .then(r => r.ok ? log('📦 已載入 targets.mind') : log('⚠️ 無法載入 targets.mind（檔名/路徑）'))
+        .catch(()=>log('❌ 讀取 targets.mind 失敗（請確認部署）'));
+
+      // A-Frame / MindAR 事件
+      sceneEl.addEventListener('loaded', ()=>log('✅ A-Frame 已載入'));
+      sceneEl.addEventListener('arReady', ()=>{ log('🚀 MindAR 已啟動'); overlay.style.display='none'; });
+      sceneEl.addEventListener('arError', (e)=>{ log('❌ AR 初始化失敗：'+JSON.stringify(e)); retryBtn.style.display='inline-block'; });
+      sceneEl.addEventListener('camera-init', ()=>log('📷 camera-init'));
+      sceneEl.addEventListener('camera-error', (e)=>{ log('❌ camera-error：'+JSON.stringify(e.detail||e)); retryBtn.style.display='inline-block'; });
+
+      // 自動依 GIF 比例調整平面（避免拉伸）
+      function fitPlaneToImage(planeEl, imgEl, baseH=1){
+        const setSize = ()=>{
           if (!imgEl.naturalWidth || !imgEl.naturalHeight) return;
           const aspect = imgEl.naturalWidth / imgEl.naturalHeight;
-          planeEl.setAttribute("height", baseHeight);
-          planeEl.setAttribute("width", baseHeight * aspect);
+          planeEl.setAttribute('height', baseH);
+          planeEl.setAttribute('width',  baseH*aspect);
         };
         if (imgEl.complete) setSize();
-        else imgEl.addEventListener("load", setSize, { once:true });
+        else imgEl.addEventListener('load', setSize, {once:true});
       }
 
-      pairs.forEach(({targetIndex, planeId, img}) => {
-        const targetEl = document.querySelector(`[mindar-image-target="targetIndex: ${targetIndex}"]`);
-        const planeEl  = document.getElementById(planeId);
-        const imgEl    = document.querySelector(img);
+      const pairs = [
+        {idx:0, p:'#p1', i:'#gif1'},
+        {idx:1, p:'#p2', i:'#gif2'},
+        {idx:2, p:'#p3', i:'#gif3'},
+        {idx:3, p:'#p4', i:'#gif4'},
+        {idx:4, p:'#p5', i:'#gif5'},
+      ];
 
-        // 自動調整平面尺寸符合 GIF 比例
-        fitPlaneToImage(planeEl, imgEl);
+      pairs.forEach(({idx,p,i})=>{
+        const target = document.querySelector(`[mindar-image-target="targetIndex: ${idx}"]`);
+        const plane  = document.querySelector(p);
+        const img    = document.querySelector(i);
 
-        const restartGif = () => {
-          // 重新指定材質觸發 shader 重建（等同重播）
-          planeEl.setAttribute("material", `shader:gif; src:${img}; transparent:true; side:double; alphaTest:0.001`);
+        fitPlaneToImage(plane, img);
+
+        const restartGif = ()=>{
+          // 重新指定 material 以重播
+          plane.setAttribute('material', `shader:gif; src:${i}; transparent:true; side:double; alphaTest:0.001`);
         };
 
-        targetEl.addEventListener("targetFound", () => {
-          log(`🎯 偵測到目標 #${targetIndex + 1}`);
+        target.addEventListener('targetFound', ()=>{
+          log(`🎯 偵測到目標 #${idx+1}`);
           restartGif();
-          planeEl.setAttribute("visible", "true");
+          plane.setAttribute('visible','true');
         });
-
-        targetEl.addEventListener("targetLost", () => {
-          log(`👋 失去目標 #${targetIndex + 1}`);
-          planeEl.setAttribute("visible", "false");
+        target.addEventListener('targetLost', ()=>{
+          log(`👋 失去目標 #${idx+1}`);
+          plane.setAttribute('visible','false');
         });
       });
 
-      // 檢查 targets.mind 可讀
-      fetch("./targets.mind")
-        .then(r => r.ok ? log("📦 已載入 targets.mind") : log("⚠️ 無法載入 targets.mind（檔名/路徑）"))
-        .catch(() => log("❌ 讀取 targets.mind 失敗（請確認部署）"));
+      // 用手勢啟動（比 autoStart 穩）
+      startBtn.addEventListener('click', ()=>{
+        try{
+          log('👉 嘗試啟動 AR（mindar-image-system.start）');
+          sceneEl.systems['mindar-image-system'].start(); // v1.2.x 正確啟動方式
+        }catch(e){
+          log('❌ 啟動呼叫失敗：'+(e.message||e));
+          retryBtn.style.display='inline-block';
+        }
+      });
+      retryBtn.addEventListener('click', ()=>location.reload());
     </script>
   </body>
 </html>
